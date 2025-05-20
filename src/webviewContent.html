@@ -153,6 +153,8 @@
         <input type="text" id="messageFilterInput" name="messageFilterInput" title="Filter by log message content. Examples:&#10;- 'Player,Spawn' (message contains Player or Spawn)&#10;- '!Debug' (message does not contain Debug)&#10;- 'Error 123' (message contains 'Error 123')">
         <span id="logCounter" class="log-counter">0 / 0</span> <!-- New: Counter element -->
         <button id="clearFilterButton">Clear</button>
+        <button id="copilotViewButton" title="Show current logs as a text document for GitHub Copilot">Copilot View</button> <!-- Added Copilot View Button -->
+        <button id="pauseButton" title="Pause log updates in the view">Pause</button> <!-- Added Pause Button -->
     </div>
 
     <div id="log-table-container">
@@ -169,6 +171,8 @@
         const messageInput = document.getElementById('messageFilterInput'); // New
         const logCounter = document.getElementById('logCounter'); // New: Get counter element
         const clearButton = document.getElementById('clearFilterButton');
+        const copilotViewButton = document.getElementById('copilotViewButton'); // Added: Get Copilot View button
+        const pauseButton = document.getElementById('pauseButton'); // Added: Get Pause button
         const logEntriesTableBody = document.getElementById('log-entries');
         const logTableContainer = document.getElementById('log-table-container');
 
@@ -290,6 +294,10 @@
                 case 'updateFontFamily': // New: Handle font family updates
                     applyFontFamily(message.fontFamily);
                     break;
+                case 'updatePauseButton': // Added: Handle pause button text update
+                    pauseButton.textContent = message.isPaused ? 'Resume' : 'Pause';
+                    pauseButton.title = message.isPaused ? 'Resume log updates' : 'Pause log updates';
+                    break;
             }
         });
 
@@ -322,6 +330,14 @@
 
         clearButton.addEventListener('click', () => {
             vscode.postMessage({ command: 'webviewClearButtonPressed' });
+        });
+
+        copilotViewButton.addEventListener('click', () => { // Added: Event listener for Copilot View button
+            vscode.postMessage({ command: 'copilotViewRequested' });
+        });
+
+        pauseButton.addEventListener('click', () => { // Added: Event listener for Pause button
+            vscode.postMessage({ command: 'togglePause' });
         });
 
         vscode.postMessage({ command: 'getInitialLogs' });

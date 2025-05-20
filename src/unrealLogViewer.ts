@@ -10,18 +10,22 @@ let unrealLogViewerProviderInstance: UnrealLogViewerProvider | undefined;
 let logTextContentProvider: UnrealLogTextDocumentContentProvider | undefined; // Added
 const LOG_TEXT_URI = vscode.Uri.parse('unreal-log-text:current-logs.log'); // Added
 
-class UnrealLogTextDocumentContentProvider implements vscode.TextDocumentContentProvider { // Added
+class UnrealLogTextDocumentContentProvider implements vscode.TextDocumentContentProvider { // Added 
 	static readonly scheme = 'unreal-log-text';
 	private _onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
 	readonly onDidChange = this._onDidChangeEmitter.event;
 
 	provideTextDocumentContent(uri: vscode.Uri): string {
 		if (uri.toString() === LOG_TEXT_URI.toString() && unrealLogViewerProviderInstance) {
-			const logs = unrealLogViewerProviderInstance.getRawLogs();
+			const rawLogs = unrealLogViewerProviderInstance.getRawLogs();
+			const filteredLogs = rawLogs.filter(log => unrealLogViewerProviderInstance!._passesFilters(log)); // Apply filters first
+
 			const config = vscode.workspace.getConfiguration('unrealLogViewer');
 			const copilotLogLimit = config.get<number>('copilotLogExportLimit', 1000);
-			const startIndex = Math.max(0, logs.length - copilotLogLimit);
-			const logsToExport = logs.slice(startIndex);
+			
+			const startIndex = Math.max(0, filteredLogs.length - copilotLogLimit);
+			const logsToExport = filteredLogs.slice(startIndex);
+			
 			// Format logs: one entry per line: "ISO_DATE LEVEL CATEGORY MESSAGE"
 			return logsToExport.map(log => `${log.date} [${log.level}] [${log.category}] ${log.message}`).join('\n');
 		}
@@ -45,6 +49,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 	private categoryFilter: string;
 	private messageFilter: string; // New
 	private lastClearTime: Date = new Date(); // For relative timestamps
+	private isPaused = false; // Added: Pause state
 
 	constructor(private readonly context: vscode.ExtensionContext) {
 		// Load persisted filters on initialization
@@ -95,6 +100,9 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 		const initialFontFamily = vscode.workspace.getConfiguration('unrealLogViewer').get<string>('logTableFontFamily', 'var(--vscode-font-family)');
 		view.webview.postMessage({ command: 'updateFontFamily', fontFamily: initialFontFamily });
 
+		// Send initial pause state
+		view.webview.postMessage({ command: 'updatePauseButton', isPaused: this.isPaused });
+
 		view.webview.onDidReceiveMessage(
 			message => {
 				switch (message.command) {
@@ -113,6 +121,12 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 						return;
 					case 'webviewClearButtonPressed': // Renamed from clearDisplayedLogs
 						this.handleWebviewClear(); // Call new handler
+						return;
+					case 'copilotViewRequested': // Added: Handle request from webview button
+						vscode.commands.executeCommand('unrealLogViewer.showLogsAsText');
+						return;
+					case 'togglePause': // Added: Handle pause/resume toggle
+						this.togglePauseState();
 						return;
 				}
 			},
@@ -340,13 +354,10 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 		}
 
 		this.logs.push(log); // Add the new incoming log
-		if (logTextContentProvider) { logTextContentProvider.refresh(LOG_TEXT_URI); } // Added
+		
+		if (!this.isPaused && logTextContentProvider) { logTextContentProvider.refresh(LOG_TEXT_URI); }
 
-		if (pruned && this._view) {
-			// Send command to webview to remove rows from the top
-			this._view.webview.postMessage({ command: 'removeOldestLogs', count: prunedCount });
-
-			// Add the internal "pruned" message to the log array AFTER actual pruning and new log addition
+		if (pruned) {
 			const pruneLogEntry = {
 				date: new Date().toISOString(),
 				level: 'WARNING',
@@ -354,45 +365,36 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 				message: `Pruned ${prunedCount} oldest log message(s) to maintain max limit of ${effectiveMaxLogs}.`
 			};
 			this.logs.push(pruneLogEntry);
-			if (logTextContentProvider) { logTextContentProvider.refresh(LOG_TEXT_URI); } // Added
+			if (!this.isPaused && logTextContentProvider) { logTextContentProvider.refresh(LOG_TEXT_URI); }
 
-			// Now, send the prune message to the webview if it passes filters
-			// Note: _passesFilters uses this.levelFilter and this.categoryFilter which are current
-			if (this._passesFilters(pruneLogEntry)) {
-				this._view.webview.postMessage({ 
-					command: 'addLogEntry', 
-					logEntry: { ...pruneLogEntry, date: this._formatDate(pruneLogEntry.date) }
-				});
+			if (!this.isPaused && this._view) {
+				this._view.webview.postMessage({ command: 'removeOldestLogs', count: prunedCount });
+				if (this._passesFilters(pruneLogEntry)) {
+					this._view.webview.postMessage({
+						command: 'addLogEntry',
+						logEntry: { ...pruneLogEntry, date: this._formatDate(pruneLogEntry.date) }
+					});
+				}
 			}
 		}
 
-		if (this._view) {
-			// Send the new incoming log (that triggered this addLog call)
+		if (!this.isPaused && this._view) {
 			if (this._passesFilters(log)) {
-				this._view.webview.postMessage({ 
-					command: 'addLogEntry', 
-					logEntry: { ...log, date: this._formatDate(log.date) } 
+				this._view.webview.postMessage({
+					command: 'addLogEntry',
+					logEntry: { ...log, date: this._formatDate(log.date) }
 				});
 			}
-			this._updateCountsInWebview(); // Update counts after all modifications
-		} else {
-			// If view is not visible, and pruning happened, we still need to add the prune message to the logs array
-			if (pruned) {
-				const pruneLogEntry = {
-					date: new Date().toISOString(),
-					level: 'WARNING',
-					category: 'LogViewerInternal',
-					message: `Pruned ${prunedCount} oldest log message(s) to maintain max limit of ${effectiveMaxLogs}.`
-				};
-				this.logs.push(pruneLogEntry);
-				if (logTextContentProvider) { logTextContentProvider.refresh(LOG_TEXT_URI); } // Added
-			}
+			this._updateCountsInWebview();
+		} else if (this.isPaused && pruned && !this._view) {
+			// If paused and view not visible, prune message is already in this.logs.
+			// No need to do anything extra here as it won't be sent to webview yet.
 		}
 	}
 
 	public clearLogs() {
 		this.logs = [];
-		if (logTextContentProvider) { logTextContentProvider.refresh(LOG_TEXT_URI); } // Added
+		if (!this.isPaused && logTextContentProvider) { logTextContentProvider.refresh(LOG_TEXT_URI); }
 		this.levelFilter = '';
 		this.categoryFilter = '';
 		this.messageFilter = ''; // New
@@ -412,7 +414,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 
 	private handleWebviewClear(): void {
 		this.logs = []; // Clear all stored logs
-		if (logTextContentProvider) { logTextContentProvider.refresh(LOG_TEXT_URI); } // Added
+		if (!this.isPaused && logTextContentProvider) { logTextContentProvider.refresh(LOG_TEXT_URI); }
 		this.lastClearTime = new Date(); // Reset timestamp baseline for relative timestamps
 
 		if (this._view) {
@@ -438,6 +440,20 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 
 		this._view.webview.postMessage({ command: 'setLogs', logs: filteredAndFormattedLogs });
 		this._updateCountsInWebview();
+	}
+
+	private togglePauseState(): void { // Added: Method to toggle pause
+		this.isPaused = !this.isPaused;
+		if (this._view) {
+			this._view.webview.postMessage({ command: 'updatePauseButton', isPaused: this.isPaused });
+		}
+
+		if (!this.isPaused) { // Just resumed
+			this._sendFilteredLogsToWebview(); // Refresh the view with all logs
+			if (logTextContentProvider) {
+				logTextContentProvider.refresh(LOG_TEXT_URI); // Refresh Copilot view
+			}
+		}
 	}
 
 	private _updateCountsInWebview() {
