@@ -1,6 +1,73 @@
 param(
-    [int]$DelayMilliseconds = 1000 # Optional delay in milliseconds, defaults to 0 (no delay)
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$Args
 )
+
+# Default values
+$Port = 9875
+$DelayMilliseconds = 1000
+$RandomDelay = $false
+$HostName = 'localhost'
+$source = $null
+
+# Help text
+$helpText = @"
+Unreal Log Viewer Test Log Generator
+
+USAGE:
+    .\generate_unreal_logs.ps1 [--host <host>] [--port <port>] [--delay <ms>] [--random] [--source <source>] [--help]
+
+OPTIONS:
+    --host <host>      Hostname or IP to connect to (default: localhost)
+    --port <port>      TCP port to connect to (default: 9875)
+    --delay <ms>       Delay in milliseconds between log messages (default: 1000)
+    --random           Use a random delay between 10ms and the specified delay (default: off)
+    --source <source>  Source identifier to include in the log (optional)
+    --help             Show this help message and exit
+
+EXAMPLES:
+    .\generate_unreal_logs.ps1
+    .\generate_unreal_logs.ps1 --host 127.0.0.1 --port 9876 --delay 500 --random --source "TestSource"
+    .\generate_unreal_logs.ps1 --help
+"@
+
+# Parse --help and named args
+if ($Args -contains '--help') {
+    Write-Host $helpText
+    exit 0
+}
+
+for ($i = 0; $i -lt $Args.Count; $i++) {
+    switch ($Args[$i]) {
+        '--host' {
+            if ($i + 1 -lt $Args.Count) {
+                $HostName = $Args[$i + 1]
+                $i++
+            }
+        }
+        '--port' {
+            if ($i + 1 -lt $Args.Count) {
+                $Port = [int]$Args[$i + 1]
+                $i++
+            }
+        }
+        '--delay' {
+            if ($i + 1 -lt $Args.Count) {
+                $DelayMilliseconds = [int]$Args[$i + 1]
+                $i++
+            }
+        }
+        '--random' {
+            $RandomDelay = $true
+        }
+        '--source' {
+            if ($i + 1 -lt $Args.Count) {
+                $source = $Args[$i + 1]
+                $i++
+            }
+        }
+    }
+}
 
 # Log levels to choose from
 $logLevels = @("FATAL", "ERROR", "WARNING", "DISPLAY", "LOG", "VERBOSE", "VERYVERBOSE")
@@ -13,23 +80,19 @@ $actions = @("Initializing", "Processing", "Completing", "Failing", "Verifying",
 $subjects = @("user login", "data record", "network packet", "configuration file", "shader compilation", "AI behavior tree", "physics simulation")
 $outcomes = @("successfully", "with errors", "after timeout", "as expected", "with warnings", "due to external input")
 
-# TCP Server Details
-$serverHost = "localhost"
-$serverPort = 9875 # Default port for the Unreal Log Viewer
-
 $tcpClient = $null
 $stream = $null
 $writer = $null
 
 function Connect-ToServer {
     param(
-        [string]$TargetHost, # Renamed from $Host to $TargetHost
+        [string]$TargetHost,
         [int]$Port
     )
     try {
         Write-Host "Attempting to connect to $TargetHost`:$Port..."
         $client = New-Object System.Net.Sockets.TcpClient
-        $client.Connect($TargetHost, $Port) # Use $TargetHost here
+        $client.Connect($TargetHost, $Port)
         if ($client.Connected) {
             Write-Host "Connected to $TargetHost`:$Port."
             return $client
@@ -49,7 +112,7 @@ while ($true) {
         if ($stream) { $stream.Close(); $stream = $null }
         if ($tcpClient) { $tcpClient.Close(); $tcpClient = $null }
 
-        $tcpClient = Connect-ToServer -TargetHost $serverHost -Port $serverPort
+        $tcpClient = Connect-ToServer -TargetHost $HostName -Port $Port
         if ($tcpClient -and $tcpClient.Connected) {
             $stream = $tcpClient.GetStream()
             $writer = New-Object System.IO.StreamWriter($stream, [System.Text.Encoding]::UTF8)
@@ -91,11 +154,21 @@ while ($true) {
     }
 
     # Create a PowerShell custom object for the log entry
-    $logEntry = [PSCustomObject]@{
-        date     = $timestamp
-        level    = $level
-        category = $category
-        message  = $messageText
+    if ($source) {
+        $logEntry = [PSCustomObject]@{
+            date     = $timestamp
+            level    = $level
+            category = $category
+            message  = $messageText
+            source   = $source
+        }
+    } else {
+        $logEntry = [PSCustomObject]@{
+            date     = $timestamp
+            level    = $level
+            category = $category
+            message  = $messageText
+        }
     }
 
     # Convert the object to a compact JSON string
@@ -121,10 +194,14 @@ while ($true) {
         if ($tcpClient) { $tcpClient.Close(); $tcpClient = $null }
     }
 
-    if ($DelayMilliseconds -gt 0) {
-        Start-Sleep -Milliseconds $DelayMilliseconds
+    $sleepMs = $DelayMilliseconds
+    if ($RandomDelay -and $DelayMilliseconds -gt 10) {
+        $sleepMs = Get-Random -Minimum 10 -Maximum ($DelayMilliseconds + 1)
     }
-}
+    if ($sleepMs -gt 0) {
+        Start-Sleep -Milliseconds $sleepMs
+    }
+} # <-- Added closing brace for while ($true) loop
 
 # Cleanup (though the script runs indefinitely, good practice for other contexts)
 if ($writer) { $writer.Close() }
