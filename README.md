@@ -4,12 +4,15 @@
 
 A Visual Studio Code extension designed to receive, display, and filter Unreal Engine logs streamed over a TCP network connection. This tool helps developers monitor and debug their Unreal Engine projects in real-time directly within VS Code.
 
+**For a quick start and usage examples, see the [User Guide](docs/UserGuide.md).**
+
 ## Project Structure
 
 - `src/` — Extension source code (TypeScript)
 - `out/` — Compiled JavaScript output (after build)
 - `resources/` — Extension assets (icons, etc.)
 - `docs/TechnicalDocumentation.md` — Full technical documentation (features, architecture, manifest details, troubleshooting)
+- `docs/UserGuide.md` — Full user guide (usage, examples)
 - `test/generate_unreal_logs.ps1` — Log generator script for testing
 - `README.md` — This file
 - `package.json`, `tsconfig.json`, etc. — Project configuration
@@ -163,6 +166,8 @@ The following settings can be configured in VS Code's settings UI:
 ## Documentation
 
 For full technical details, advanced usage, troubleshooting, and manifest information, see [`docs/TechnicalDocumentation.md`](docs/TechnicalDocumentation.md).
+
+For a concise how-to and filtering examples, see the [User Guide](docs/UserGuide.md).
 
 ## Contributing
 
