@@ -1,6 +1,6 @@
 # Unreal Log Viewer — User Guide
 
-This guide explains how to use the Unreal Log Viewer extension in Visual Studio Code to monitor and filter Unreal Engine logs in real time.
+This guide explains how to use the Unreal Log Viewer extension (Unreal Log-Viewer 3, version 1.0.0) in Visual Studio Code to monitor and filter Unreal Engine logs in real time.
 
 ## Opening the Log Viewer
 
@@ -42,6 +42,21 @@ You can open a plain text view of recent logs to provide context for GitHub Copi
 - Run **Unreal Log Viewer: Show Logs as Text for Copilot** from the Command Palette.
 - This opens a new tab with recent logs as plain text, which Copilot can use for better suggestions.
 - The number of logs shown is controlled by the `unrealLogViewer.copilotLogExportLimit` setting.
+
+## Configuration Settings
+
+You can configure the following settings in VS Code (search for "Unreal Log Viewer"):
+
+- `unrealLogViewer.serverPort`: TCP port for the log server (default: 9876)
+- `unrealLogViewer.useRelativeTimestamps`: Show timestamps as relative to last clear (default: false)
+- `unrealLogViewer.logTableFontSize`: Font size for log table (default: var(--vscode-font-size))
+- `unrealLogViewer.useLogLevelColors`: Enable log level color coding (default: true)
+- `unrealLogViewer.maxLogMessages`: Maximum number of log messages to keep (default: 10000)
+- `unrealLogViewer.showGridLines`: Show grid lines in the log table (default: false)
+- `unrealLogViewer.logTableFontFamily`: Font family for the log table (default: var(--vscode-font-family))
+- `unrealLogViewer.copilotLogExportLimit`: Max logs for Copilot text view (default: 1000)
+
+If you change the server port, you must run **Unreal Log Viewer: Apply Server Port Change** from the Command Palette for the new port to take effect.
 
 ## More Help
 

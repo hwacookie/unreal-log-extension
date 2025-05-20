@@ -10,6 +10,15 @@ let unrealLogViewerProviderInstance: UnrealLogViewerProvider | undefined;
 let logTextContentProvider: UnrealLogTextDocumentContentProvider | undefined; // Added
 const LOG_TEXT_URI = vscode.Uri.parse('unreal-log-text:current-logs.log'); // Added
 
+interface UnrealLogEntry { // Updated log type
+	date: string;
+	level: string;
+	category: string;
+	message: string;
+	source?: string;
+	src?: string;
+}
+
 class UnrealLogTextDocumentContentProvider implements vscode.TextDocumentContentProvider { // Added 
 	static readonly scheme = 'unreal-log-text';
 	private _onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
@@ -44,7 +53,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 	private static readonly CATEGORY_FILTER_KEY = 'categoryFilter';
 	private static readonly MESSAGE_FILTER_KEY = 'messageFilter'; // New
 	private _view?: vscode.WebviewView;
-	private logs: { date: string; level: string; category: string; message: string }[] = [];
+	private logs: UnrealLogEntry[] = []; // Updated type
 	private levelFilter: string;
 	private categoryFilter: string;
 	private messageFilter: string; // New
@@ -58,7 +67,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 		this.messageFilter = this.context.workspaceState.get<string>(UnrealLogViewerProvider.MESSAGE_FILTER_KEY, ''); // New
 	}
 
-	public getRawLogs(): { date: string; level: string; category: string; message: string }[] { // Added
+	public getRawLogs(): UnrealLogEntry[] { // Updated type
 		return this.logs;
 	}
 
@@ -191,7 +200,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
-	public _passesFilters(log: { date: string; level: string; category: string; message: string }): boolean {
+	public _passesFilters(log: UnrealLogEntry): boolean { // Updated type
 		let passesLevelFilter = true;
 		const currentLevelFilter = this.levelFilter.trim();
 
@@ -334,7 +343,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 		return passesLevelFilter && passesCategoryFilter && passesMessageFilter; // Updated
 	}
 
-	public addLog(log: { date: string; level: string; category: string; message: string }) {
+	public addLog(log: UnrealLogEntry) { // Updated type
 		const config = vscode.workspace.getConfiguration('unrealLogViewer');
 		const maxLogsSetting = config.get<number>('maxLogMessages', 10000);
 		const minAllowedLogs = 100; // As per package.json minimum
@@ -358,7 +367,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 		if (!this.isPaused && logTextContentProvider) { logTextContentProvider.refresh(LOG_TEXT_URI); }
 
 		if (pruned) {
-			const pruneLogEntry = {
+			const pruneLogEntry: UnrealLogEntry = { // Updated type
 				date: new Date().toISOString(),
 				level: 'WARNING',
 				category: 'LogViewerInternal',
@@ -372,7 +381,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 				if (this._passesFilters(pruneLogEntry)) {
 					this._view.webview.postMessage({
 						command: 'addLogEntry',
-						logEntry: { ...pruneLogEntry, date: this._formatDate(pruneLogEntry.date) }
+						logEntry: { ...pruneLogEntry, source: pruneLogEntry.source || pruneLogEntry.src || undefined, date: this._formatDate(pruneLogEntry.date) } // Updated
 					});
 				}
 			}
@@ -382,7 +391,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 			if (this._passesFilters(log)) {
 				this._view.webview.postMessage({
 					command: 'addLogEntry',
-					logEntry: { ...log, date: this._formatDate(log.date) }
+					logEntry: { ...log, source: log.source || log.src || undefined, date: this._formatDate(log.date) } // Updated
 				});
 			}
 			this._updateCountsInWebview();
@@ -435,6 +444,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 			.filter(log => this._passesFilters(log)) // Use original log for filtering
 			.map(log => ({ // Format date for display
 				...log,
+				source: log.source || log.src || undefined, // Updated
 				date: this._formatDate(log.date)
 			}));
 
@@ -582,13 +592,41 @@ export function activate(context: vscode.ExtensionContext) {
 			let buffer = '';
 			socket.on('data', data => {
 				buffer += data.toString();
-				let index;
-				while ((index = buffer.indexOf('\n')) !== -1) {
-					const line = buffer.slice(0, index).trim();
-					buffer = buffer.slice(index + 1);
-					if (line) {
+				let startIdx = buffer.indexOf('{');
+				while (startIdx !== -1) {
+					let braceCount = 0;
+					let inString = false;
+					let escape = false;
+					let endIdx = -1;
+					for (let i = startIdx; i < buffer.length; i++) {
+						const char = buffer[i];
+						if (inString) {
+							if (escape) {
+								escape = false;
+							} else if (char === '\\') {
+								escape = true;
+							} else if (char === '"') {
+								inString = false;
+							}
+						} else {
+							if (char === '"') {
+								inString = true;
+							} else if (char === '{') {
+								braceCount++;
+							} else if (char === '}') {
+								braceCount--;
+								if (braceCount === 0) {
+									endIdx = i;
+									break;
+								}
+							}
+						}
+					}
+					if (endIdx !== -1) {
+						const jsonStr = buffer.slice(startIdx, endIdx + 1);
+						buffer = buffer.slice(endIdx + 1);
 						try {
-							const log = JSON.parse(line);
+							const log: UnrealLogEntry = JSON.parse(jsonStr); // Updated type
 							if (unrealLogViewerProviderInstance) {
 								unrealLogViewerProviderInstance.addLog(log);
 							} else {
@@ -597,8 +635,12 @@ export function activate(context: vscode.ExtensionContext) {
 							}
 						} catch (e) {
 							const errorMessage = e instanceof Error ? e.message : String(e);
-							outputChannel?.appendLine(`Invalid JSON: ${line} (Error: ${errorMessage})`);
+							outputChannel?.appendLine(`Invalid JSON: ${jsonStr} (Error: ${errorMessage})`);
 						}
+						startIdx = buffer.indexOf('{');
+					} else {
+						// Wait for more data
+						break;
 					}
 				}
 			});

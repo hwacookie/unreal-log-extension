@@ -73,6 +73,10 @@
             border: none;
         }
 
+        thead th, .col-src, .col-date, .col-level, .col-category, .col-message {
+            text-align: left;
+        }
+
         .col-date, .col-level, .col-category {
             white-space: nowrap;
             text-overflow: ellipsis;
@@ -84,6 +88,16 @@
         .col-message {
             white-space: pre-wrap;
             word-break: break-all;
+        }
+        .col-src {
+            width: 2.5em;
+            min-width: 2.5em;
+            max-width: 3em;
+            text-align: center;
+            font-weight: bold;
+            color: #888;
+            background: inherit;
+            letter-spacing: 0.05em;
         }
         /* Updated and Extended Log Level Colors */
         .level-FATAL { color: #FF00FF; }       /* Fuchsia/Magenta */
@@ -159,6 +173,11 @@
 
     <div id="log-table-container">
         <table> 
+            <thead>
+                <tr id="log-table-header-row">
+                    <!-- Header cells will be inserted dynamically -->
+                </tr>
+            </thead>
             <tbody id="log-entries">
                 <!-- Log entries will be dynamically inserted here -->
             </tbody>
@@ -175,6 +194,8 @@
         const pauseButton = document.getElementById('pauseButton'); // Added: Get Pause button
         const logEntriesTableBody = document.getElementById('log-entries');
         const logTableContainer = document.getElementById('log-table-container');
+
+        let showSrcColumn = false;
 
         function applyFontSize(fontSize) {
             document.documentElement.style.setProperty('--log-table-font-size', fontSize);
@@ -206,6 +227,29 @@
             return div.innerHTML;
         }
 
+        function updateTableHeader() {
+            const headerRow = document.getElementById('log-table-header-row');
+            headerRow.innerHTML = '';
+            if (showSrcColumn) {
+                const thSrc = document.createElement('th');
+                thSrc.className = 'col-src';
+                thSrc.textContent = 'SRC';
+                headerRow.appendChild(thSrc);
+            }
+            const thDate = document.createElement('th'); thDate.className = 'col-date'; thDate.textContent = 'Date'; headerRow.appendChild(thDate);
+            const thLevel = document.createElement('th'); thLevel.className = 'col-level'; thLevel.textContent = 'Level'; headerRow.appendChild(thLevel);
+            const thCategory = document.createElement('th'); thCategory.className = 'col-category'; thCategory.textContent = 'Category'; headerRow.appendChild(thCategory);
+            const thMessage = document.createElement('th'); thMessage.className = 'col-message'; thMessage.textContent = 'Message'; headerRow.appendChild(thMessage);
+        }
+
+        function logHasSource(log) {
+            return (typeof log.source === 'string' && log.source.trim().length > 0) || (typeof log.src === 'string' && log.src.trim().length > 0);
+        }
+
+        function checkShowSrcColumn(logs) {
+            return logs.some(logHasSource);
+        }
+
         function createLogRowHtml(log) {
             const sanitizedLevel = sanitize(log.level.toUpperCase()); // Ensure consistent casing for class names
             const levelClass = 'level-' + sanitizedLevel; // e.g. level-FATAL, level-WARNING
@@ -214,21 +258,35 @@
             const levelHtml = sanitize(log.level); // Display original casing for the text content
             const categoryHtml = sanitize(log.category);
             const messageHtml = sanitize(log.message);
+            let srcVal = (log.source || log.src || '');
+            if (typeof srcVal === 'string') {
+                srcVal = srcVal.substring(0, 3); // Truncate to max 3 chars
+            }
+            const srcHtml = sanitize(srcVal);
 
-            return `
-                <tr>
-                    <td class="col-date date">${dateHtml}</td>
-                    <td class="col-level ${levelClass}">${levelHtml}</td>
-                    <td class="col-category">${categoryHtml}</td>
-                    <td class="col-message">${messageHtml}</td>
-                </tr>
-            `;
+            let rowHtml = '<tr>';
+            if (showSrcColumn) {
+                rowHtml += `<td class="col-src">${srcHtml}</td>`;
+            }
+            rowHtml += `<td class="col-date date">${dateHtml}</td>`;
+            rowHtml += `<td class="col-level ${levelClass}">${levelHtml}</td>`;
+            rowHtml += `<td class="col-category">${categoryHtml}</td>`;
+            rowHtml += `<td class="col-message">${messageHtml}</td>`;
+            rowHtml += '</tr>';
+            return rowHtml;
         }
 
         function createLogTableRow(log) {
             const row = document.createElement('tr');
             row.innerHTML = createLogRowHtml(log);
             return row;
+        }
+
+        function updateAllRows(logs) {
+            logEntriesTableBody.innerHTML = '';
+            logs.forEach(log => {
+                logEntriesTableBody.appendChild(createLogTableRow(log));
+            });
         }
 
         function shouldScrollToBottom() {
@@ -239,10 +297,20 @@
             logTableContainer.scrollTop = logTableContainer.scrollHeight;
         }
         
+        // Store all logs for dynamic column logic
+        let allLogs = [];
+
         window.addEventListener('message', event => {
             const message = event.data;
             switch (message.command) {
-                case 'addLogEntry':
+                case 'addLogEntry': {
+                    allLogs.push(message.logEntry);
+                    if (!showSrcColumn && logHasSource(message.logEntry)) {
+                        showSrcColumn = true;
+                        updateTableHeader();
+                        updateAllRows(allLogs);
+                        break;
+                    }
                     const wasScrolledToBottom = shouldScrollToBottom();
                     const newRow = createLogTableRow(message.logEntry);
                     logEntriesTableBody.appendChild(newRow);
@@ -250,30 +318,28 @@
                         scrollToBottom();
                     }
                     break;
-                case 'removeOldestLogs': // New case to handle removing rows from the top
+                }
+                case 'removeOldestLogs': {
                     const countToRemove = message.count;
-                    for (let i = 0; i < countToRemove; i++) {
-                        if (logEntriesTableBody.firstChild) {
-                            logEntriesTableBody.removeChild(logEntriesTableBody.firstChild);
-                        }
-                    }
+                    allLogs.splice(0, countToRemove);
+                    updateAllRows(allLogs);
                     break;
-                case 'setLogs':
+                }
+                case 'setLogs': {
+                    allLogs = message.logs.slice();
+                    showSrcColumn = checkShowSrcColumn(allLogs);
+                    updateTableHeader();
+                    updateAllRows(allLogs);
                     const oldScrollTop = logTableContainer.scrollTop;
                     const oldScrollHeight = logTableContainer.scrollHeight;
                     const oldClientHeight = logTableContainer.clientHeight;
-                    
-                    logEntriesTableBody.innerHTML = '';
-                    message.logs.forEach(log => {
-                        logEntriesTableBody.appendChild(createLogTableRow(log));
-                    });
-
                     if (oldScrollHeight - oldScrollTop <= oldClientHeight + 50) {
                         scrollToBottom();
                     } else {
                         logTableContainer.scrollTop = oldScrollTop;
                     }
                     break;
+                }
                 case 'updateFilterInputs':
                     levelInput.value = message.levelFilter;
                     categoryInput.value = message.categoryFilter;
