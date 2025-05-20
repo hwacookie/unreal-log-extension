@@ -38,7 +38,7 @@ class UnrealLogTextDocumentContentProvider implements vscode.TextDocumentContent
 }
 
 class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
-	public static readonly viewType = 'unrealLogViewerView2';
+	public static readonly viewType = 'unrealLogViewerView3';
 	private static readonly LOG_LEVEL_ORDER = ["VERYVERBOSE", "VERBOSE", "LOG", "DISPLAY", "WARNING", "ERROR", "FATAL"]; // New
 	private static readonly LEVEL_FILTER_KEY = 'levelFilter';
 	private static readonly CATEGORY_FILTER_KEY = 'categoryFilter';
@@ -191,7 +191,7 @@ class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
-	private _passesFilters(log: { date: string; level: string; category: string; message: string }): boolean {
+	public _passesFilters(log: { date: string; level: string; category: string; message: string }): boolean {
 		let passesLevelFilter = true;
 		const currentLevelFilter = this.levelFilter.trim();
 
@@ -638,14 +638,10 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('unrealLogViewer.create', () => {
 			console.log('Unreal Log Viewer: create command invoked.');
-			// This sequence ensures the container is visible, then focuses the specific view.
+			// This sequence ensures the container is visible.
 			vscode.commands.executeCommand('workbench.view.extension.unrealLogViewerContainer').then(() => {
-				vscode.commands.executeCommand(`workbench.view.${UnrealLogViewerProvider.viewType}`).then(() => {
-					console.log(`Focus command for ${UnrealLogViewerProvider.viewType} executed.`);
-				}, (err) => { // Added error handling for inner .then
-					console.error(`Error focusing view ${UnrealLogViewerProvider.viewType}:`, err);
-					vscode.window.showErrorMessage(`Failed to focus Unreal Log Viewer: ${UnrealLogViewerProvider.viewType}`);
-				}); // Added closing for inner .then
+				vscode.commands.executeCommand('unrealLogViewerView3.focus');
+				console.log('Unreal Log Viewer container shown.');
 			}, (containerErr) => { // Added error handling for outer .then
 				console.error('Error opening Unreal Log Viewer container:', containerErr);
 				vscode.window.showErrorMessage('Failed to open Unreal Log Viewer container.');

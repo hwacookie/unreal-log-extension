@@ -1,8 +1,8 @@
 {
 	"name": "unreal-log-viewer",
-	"displayName": "Unreal Log-Viewer 2",
+	"displayName": "Unreal Log-Viewer 3",
 	"description": "A Visual Studio Code extension to view Unreal Engine logs received over a server port.",
-	"version": "0.0.1",
+	"version": "0.0.3",
 	"publisher": "coregames",
 	"private": true,
 	"license": "MIT",
@@ -17,7 +17,7 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onView:unrealLogViewerView2",
+		"onView:unrealLogViewerView3",
 		"onCommand:unrealLogViewer.create",
 		"onCommand:unrealLogViewer.clear",
 		"onCommand:unrealLogViewer.applyServerPortChange",
@@ -104,7 +104,7 @@
 		"views": {
 			"unrealLogViewerContainer": [
 				{
-					"id": "unrealLogViewerView2",
+					"id": "unrealLogViewerView3",
 					"name": "Unreal Log Viewer",
 					"type": "webview",
 					"icon": "resources/unreal-log-viewer.svg"
