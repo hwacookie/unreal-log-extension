@@ -1,0 +1,52 @@
+# TypeScript / JavaScript compilation output
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# NPM/Yarn log files
+npm-debug.log*
+yarn-error.log*
+yarn-debug.log*
+
+# VS Code specific files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# VS Code Extension packaging
+*.vsix
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Log files
+*.log
+logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Coverage output
+coverage/
+.nyc_output/
