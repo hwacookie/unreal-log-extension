@@ -1,8 +1,18 @@
-# Unreal Log Viewer 2
+# Unreal Log Viewer 3
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 A Visual Studio Code extension designed to receive, display, and filter Unreal Engine logs streamed over a TCP network connection. This tool helps developers monitor and debug their Unreal Engine projects in real-time directly within VS Code.
+
+## Project Structure
+
+- `src/` — Extension source code (TypeScript)
+- `out/` — Compiled JavaScript output (after build)
+- `resources/` — Extension assets (icons, etc.)
+- `docs/TechnicalDocumentation.md` — Full technical documentation (features, architecture, manifest details, troubleshooting)
+- `test/generate_unreal_logs.ps1` — Log generator script for testing
+- `README.md` — This file
+- `package.json`, `tsconfig.json`, etc. — Project configuration
 
 ## Features
 
@@ -150,10 +160,14 @@ The following settings can be configured in VS Code's settings UI:
 4.  Start the TypeScript watcher: `npm run watch` (or press F5 to launch an Extension Development Host window).
 5.  Make your changes. The watcher will recompile on save.
 
+## Documentation
+
+For full technical details, advanced usage, troubleshooting, and manifest information, see [`docs/TechnicalDocumentation.md`](docs/TechnicalDocumentation.md).
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit pull requests or open issues.
 
 ## License
 
-[GPL-3.0-only](LICENSE.md) (Assuming you will add a LICENSE.md file with the GPLv3 license text)
+[GPL-3.0-only](LICENSE) — See the LICENSE file for details.

@@ -4,11 +4,11 @@
 	"description": "A Visual Studio Code extension to view Unreal Engine logs received over a server port.",
 	"version": "0.0.3",
 	"publisher": "coregames",
-	"private": true,
-	"license": "MIT",
+	"private": false,
+	"license": "GPL-3.0-only",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
+		"url": "https://github.com/hwacookie/unreal-log-extension"
 	},
 	"engines": {
 		"vscode": "^1.73.0"
