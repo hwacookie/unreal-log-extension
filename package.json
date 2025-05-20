@@ -1,0 +1,133 @@
+{
+	"name": "unreal-log-viewer",
+	"displayName": "Unreal Log-Viewer 2",
+	"description": "A Visual Studio Code extension to view Unreal Engine logs received over a server port.",
+	"version": "0.0.1",
+	"publisher": "coregames",
+	"private": true,
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Microsoft/vscode-extension-samples"
+	},
+	"engines": {
+		"vscode": "^1.73.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onView:unrealLogViewerView2",
+		"onCommand:unrealLogViewer.create",
+		"onCommand:unrealLogViewer.clear",
+		"onCommand:unrealLogViewer.applyServerPortChange",
+		"onCommand:unrealLogViewer.showLogsAsText"
+	],
+	"main": "./out/unrealLogViewer.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "unrealLogViewer.create",
+				"title": "Unreal Log Viewer: Create"
+			},
+			{
+				"command": "unrealLogViewer.clear",
+				"title": "Unreal Log Viewer: Clear"
+			},
+			{
+				"command": "unrealLogViewer.applyServerPortChange",
+				"title": "Unreal Log Viewer: Apply Server Port Change"
+			},
+			{
+				"command": "unrealLogViewer.showLogsAsText",
+				"title": "Unreal Log Viewer: Show Logs as Text for Copilot"
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "Unreal Log Viewer",
+			"properties": {
+				"unrealLogViewer.serverPort": {
+					"type": "number",
+					"default": 9876,
+					"description": "The TCP port for the Unreal Log Viewer server to listen on. After changing, run the 'Unreal Log Viewer: Apply Server Port Change' command from the command palette to apply."
+				},
+				"unrealLogViewer.useRelativeTimestamps": {
+					"type": "boolean",
+					"default": false,
+					"description": "Display timestamps relative to the last log clear (e.g., +3s, +1m) instead of absolute dates."
+				},
+				"unrealLogViewer.logTableFontSize": {
+					"type": "string",
+					"default": "var(--vscode-font-size)",
+					"description": "Font size for the log table content (e.g., '12px', '0.9em', 'var(--vscode-font-size)')."
+				},
+				"unrealLogViewer.useLogLevelColors": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable custom color coding for log levels and dates in the log table. If false, all log text uses the editor's default foreground color."
+				},
+				"unrealLogViewer.maxLogMessages": {
+					"type": "number",
+					"default": 10000,
+					"minimum": 100,
+					"description": "Maximum number of log messages to keep. When this limit is exceeded, the oldest 10% of messages are removed, and an internal message is logged."
+				},
+				"unrealLogViewer.showGridLines": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show grid lines in the log table."
+				},
+				"unrealLogViewer.logTableFontFamily": {
+					"type": "string",
+					"default": "var(--vscode-font-family)",
+					"description": "Font family for the log table content (e.g., 'Consolas', 'Courier New', 'var(--vscode-font-family)')."
+				},
+				"unrealLogViewer.copilotLogExportLimit": {
+					"type": "number",
+					"default": 1000,
+					"minimum": 100,
+					"maximum": 10000,
+					"description": "Maximum number of recent log messages to expose via the 'Show Logs as Text for Copilot' feature. Helps manage context size for Copilot. (Default: 1000, Min: 100, Max: 10000)"
+				}
+			}
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "unrealLogViewerContainer",
+					"title": "Unreal Log Viewer",
+					"icon": "resources/unreal-log-viewer.svg"
+				}
+			]
+		},
+		"views": {
+			"unrealLogViewerContainer": [
+				{
+					"id": "unrealLogViewerView2",
+					"name": "Unreal Log Viewer",
+					"type": "webview",
+					"icon": "resources/unreal-log-viewer.svg"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"lint": "eslint"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.13.0",
+		"@stylistic/eslint-plugin": "^2.9.0",
+		"@types/node": "^20",
+		"@types/vscode": "^1.74.0",
+		"eslint": "^9.13.0",
+		"typescript": "^5.8.2",
+		"typescript-eslint": "^8.26.0"
+	},
+	"dependencies": {
+		"unreal-log-viewer": "file:"
+	}
+}
