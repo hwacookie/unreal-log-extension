@@ -233,28 +233,32 @@ export function activate(context: vscode.ExtensionContext) {
 	); // Added closing for context.subscriptions.push
 
 	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
-		if (event.affectsConfiguration('unrealLogViewer.serverPort')) {
-			vscode.window.showInformationMessage('Unreal Log Viewer: Server port setting changed. Run "Unreal Log Viewer: Apply Server Port Change" to apply.');
-		}
-		if (event.affectsConfiguration('unrealLogViewer.useRelativeTimestamps')) {
-			// If the timestamp format setting changes, re-send logs to update display
-			provider.requestLogRefresh(); // Changed to use a public method on provider
-		}
-		if (event.affectsConfiguration('unrealLogViewer.logTableFontSize')) {
-			const newFontSize = vscode.workspace.getConfiguration('unrealLogViewer').get<string>('logTableFontSize', 'var(--vscode-font-size)');
-			provider.updateWebviewFontSize(newFontSize);
-		}
-		if (event.affectsConfiguration('unrealLogViewer.useLogLevelColors')) {
-			const useColors = vscode.workspace.getConfiguration('unrealLogViewer').get<boolean>('useLogLevelColors', true);
-			provider.updateWebviewColorMode(useColors);
-		}
-		if (event.affectsConfiguration('unrealLogViewer.showGridLines')) {
-			const showGridLines = vscode.workspace.getConfiguration('unrealLogViewer').get<boolean>('showGridLines', false);
-			provider.updateWebviewGridLinesVisibility(showGridLines);
-		}
-		if (event.affectsConfiguration('unrealLogViewer.logTableFontFamily')) { // New configuration change handler
-			const newFontFamily = vscode.workspace.getConfiguration('unrealLogViewer').get<string>('logTableFontFamily', 'var(--vscode-font-family)');
-			provider.updateWebviewFontFamily(newFontFamily);
+		if (unrealLogViewerProviderInstance) { // Ensure provider instance exists
+			if (event.affectsConfiguration('unrealLogViewer.serverPort')) {
+				vscode.window.showInformationMessage('Unreal Log Viewer: Server port setting changed. Run "Unreal Log Viewer: Apply Server Port Change" to apply.');
+			}
+			if (event.affectsConfiguration('unrealLogViewer.useRelativeTimestamps')) {
+				unrealLogViewerProviderInstance.handleConfigurationChange('unrealLogViewer.useRelativeTimestamps');
+			}
+			if (event.affectsConfiguration('unrealLogViewer.timestampFormat')) { // Added for completeness, though _formatDate might not use it directly for absolute yet
+				unrealLogViewerProviderInstance.handleConfigurationChange('unrealLogViewer.timestampFormat');
+			}
+			if (event.affectsConfiguration('unrealLogViewer.logTableFontSize')) {
+				const newFontSize = vscode.workspace.getConfiguration('unrealLogViewer').get<string>('logTableFontSize', 'var(--vscode-font-size)');
+				unrealLogViewerProviderInstance.updateWebviewFontSize(newFontSize);
+			}
+			if (event.affectsConfiguration('unrealLogViewer.useLogLevelColors')) {
+				const useColors = vscode.workspace.getConfiguration('unrealLogViewer').get<boolean>('useLogLevelColors', true);
+				unrealLogViewerProviderInstance.updateWebviewColorMode(useColors);
+			}
+			if (event.affectsConfiguration('unrealLogViewer.showGridLines')) {
+				const showGridLines = vscode.workspace.getConfiguration('unrealLogViewer').get<boolean>('showGridLines', false);
+				unrealLogViewerProviderInstance.updateWebviewGridLinesVisibility(showGridLines);
+			}
+			if (event.affectsConfiguration('unrealLogViewer.logTableFontFamily')) {
+				const newFontFamily = vscode.workspace.getConfiguration('unrealLogViewer').get<string>('logTableFontFamily', 'var(--vscode-font-family)');
+				unrealLogViewerProviderInstance.updateWebviewFontFamily(newFontFamily);
+			}
 		}
 	}));
 
@@ -273,6 +277,41 @@ export function activate(context: vscode.ExtensionContext) {
 		outputChannel?.appendLine(`Command executed. Applying new port: ${newPort}`);
 		createAndListenServer(newPort);
 		vscode.window.showInformationMessage(`Unreal Log Viewer: Server is now attempting to listen on port ${newPort}.`);
+	}));
+
+	// The 'unrealLogViewer.refreshConfigForTest' command is being removed.
+	// context.subscriptions.push(vscode.commands.registerCommand('unrealLogViewer.refreshConfigForTest', () => {
+	// 	// This command is now a no-op as the provider reads config directly.
+	// 	// Kept for now to avoid breaking tests that might still call it, though they should be updated.
+	// 	console.log('unrealLogViewer.refreshConfigForTest called, but is now a no-op.');
+	// }));
+
+	// Command for tests to retrieve displayed logs
+	context.subscriptions.push(vscode.commands.registerCommand('unrealLogViewer.getDisplayedLogMessagesForTest', () => {
+		if (unrealLogViewerProviderInstance) {
+			return unrealLogViewerProviderInstance.getDisplayedLogEntriesForTest();
+		}
+		return []; // Return empty if provider is not available
+	}));
+
+	// Commands for testing filters and pause state
+	context.subscriptions.push(vscode.commands.registerCommand('unrealLogViewer.setFiltersForTest', (filters: { level?: string; category?: string; message?: string }) => {
+		if (unrealLogViewerProviderInstance) {
+			unrealLogViewerProviderInstance.setFiltersForTest(filters);
+		}
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('unrealLogViewer.togglePauseForTest', () => {
+		if (unrealLogViewerProviderInstance) {
+			unrealLogViewerProviderInstance.togglePauseStateForTest();
+		}
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('unrealLogViewer.getPauseStateForTest', () => {
+		if (unrealLogViewerProviderInstance) {
+			return unrealLogViewerProviderInstance.getPauseStateForTest();
+		}
+		return false; // Default to not paused if provider isn't available
 	}));
 }
 

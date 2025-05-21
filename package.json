@@ -21,9 +21,13 @@
 		"onCommand:unrealLogViewer.create",
 		"onCommand:unrealLogViewer.clear",
 		"onCommand:unrealLogViewer.applyServerPortChange",
-		"onCommand:unrealLogViewer.showLogsAsText"
+		"onCommand:unrealLogViewer.showLogsAsText",
+		"onCommand:unrealLogViewer.getDisplayedLogMessagesForTest",
+		"onCommand:unrealLogViewer.setFiltersForTest",
+		"onCommand:unrealLogViewer.togglePauseForTest",
+		"onCommand:unrealLogViewer.getPauseStateForTest"
 	],
-	"main": "./out/unrealLogViewer.js",
+	"main": "./out/src/unrealLogViewer.js",
 	"contributes": {
 		"commands": [
 			{
@@ -41,6 +45,22 @@
 			{
 				"command": "unrealLogViewer.showLogsAsText",
 				"title": "Unreal Log Viewer: Show Logs as Text for Copilot"
+			},
+			{
+				"command": "unrealLogViewer.getDisplayedLogMessagesForTest",
+				"title": "Unreal Log Viewer: Get Displayed Log Messages (For Testing)"
+			},
+			{
+				"command": "unrealLogViewer.setFiltersForTest",
+				"title": "Unreal Log Viewer: Set Filters (For Testing)"
+			},
+			{
+				"command": "unrealLogViewer.togglePauseForTest",
+				"title": "Unreal Log Viewer: Toggle Pause State (For Testing)"
+			},
+			{
+				"command": "unrealLogViewer.getPauseStateForTest",
+				"title": "Unreal Log Viewer: Get Pause State (For Testing)"
 			}
 		],
 		"configuration": {
@@ -83,6 +103,11 @@
 					"default": "var(--vscode-font-family)",
 					"description": "Font family for the log table content (e.g., 'Consolas', 'Courier New', 'var(--vscode-font-family)')."
 				},
+				"unrealLogViewer.timestampFormat": {
+					"type": "string",
+					"default": "HH:mm:ss.SSS",
+					"description": "Format for absolute timestamps. Uses Day.js format strings (e.g., 'YYYY-MM-DD HH:mm:ss')."
+				},
 				"unrealLogViewer.copilotLogExportLimit": {
 					"type": "number",
 					"default": 1000,
@@ -116,14 +141,22 @@
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
-		"lint": "eslint"
+		"lint": "eslint",
+		"test:ui": "ts-node test/ui/runVSCodeTests.ts",
+		"test:ui:full": "npm run compile && npm run test:ui"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.13.0",
+		"@playwright/test": "^1.52.0",
 		"@stylistic/eslint-plugin": "^2.9.0",
-		"@types/node": "^20",
+		"@types/mocha": "^10.0.10",
+		"@types/node": "^20.17.49",
 		"@types/vscode": "^1.74.0",
+		"@vscode/test-electron": "^2.5.2",
 		"eslint": "^9.13.0",
+		"mocha": "^11.4.0",
+		"playwright": "^1.52.0",
+		"ts-node": "^10.9.2",
 		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.26.0"
 	},

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { UnrealLogEntry } from './logTypes';
+import { passesLogFilters } from './logFilter';
 
 export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'unrealLogViewerView3';
@@ -16,6 +17,11 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
     private lastClearTime: Date = new Date();
     private isPaused = false;
     private _lastShownCountWhenPaused?: number;
+    private displayedLogsOnPause: Pick<UnrealLogEntry, 'date' | 'level' | 'category' | 'message' | 'source'>[] = [];
+
+    // Cached configuration values
+    private _useRelativeTimestamps: boolean;
+    private _timestampFormat: string; // Although not fully used by _formatDate for absolute, it's good practice to cache it
 
     /**
      * Optional callback to be invoked when logs are cleared (for Copilot/text view refresh).
@@ -26,6 +32,35 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         this.levelFilter = this.context.workspaceState.get<string>(UnrealLogViewerProvider.LEVEL_FILTER_KEY, '');
         this.categoryFilter = this.context.workspaceState.get<string>(UnrealLogViewerProvider.CATEGORY_FILTER_KEY, '');
         this.messageFilter = this.context.workspaceState.get<string>(UnrealLogViewerProvider.MESSAGE_FILTER_KEY, '');
+        
+        // Initialize with defaults, then load actual config
+        this._useRelativeTimestamps = false; 
+        this._timestampFormat = 'HH:mm:ss.SSS';
+        this._loadConfiguration();
+    }
+
+    private _loadConfiguration(): void {
+        const config = vscode.workspace.getConfiguration('unrealLogViewer');
+        this._useRelativeTimestamps = config.get<boolean>('useRelativeTimestamps', false);
+        this._timestampFormat = config.get<string>('timestampFormat', 'HH:mm:ss.SSS');
+        console.log(`UNREAL LOG VIEWER Provider: Loaded config - useRelative: ${this._useRelativeTimestamps}, format: ${this._timestampFormat}`);
+    }
+
+    /**
+     * Handles configuration changes relevant to the provider.
+     * @param affectedSettingKey The key of the configuration setting that changed.
+     */
+    public handleConfigurationChange(affectedSettingKey: string): void {
+        console.log(`UNREAL LOG VIEWER Provider: handleConfigurationChange called for ${affectedSettingKey}`);
+        this._loadConfiguration(); // Reload all relevant configurations
+
+        // Check if the changed setting requires a log refresh
+        if (affectedSettingKey === 'unrealLogViewer.useRelativeTimestamps' || affectedSettingKey === 'unrealLogViewer.timestampFormat') {
+            if (!this.isPaused) { // Only refresh if not paused, otherwise changes apply on resume
+                this.requestLogRefresh();
+            }
+        }
+        // Other settings might directly update webview without full log refresh (e.g., font size, handled in unrealLogViewer.ts)
     }
 
     public get paused(): boolean {
@@ -72,35 +107,50 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         view.webview.postMessage({ command: 'updatePauseButton', isPaused: this.isPaused });
 
         view.webview.onDidReceiveMessage(
-            message => {
-                switch (message.command) {
-                    case 'applyFilters':
-                        this.levelFilter = message.levelFilter?.trim() || '';
-                        this.categoryFilter = message.categoryFilter?.trim() || '';
-                        this.messageFilter = message.messageFilter?.trim() || '';
-                        this.context.workspaceState.update(UnrealLogViewerProvider.LEVEL_FILTER_KEY, this.levelFilter);
-                        this.context.workspaceState.update(UnrealLogViewerProvider.CATEGORY_FILTER_KEY, this.categoryFilter);
-                        this.context.workspaceState.update(UnrealLogViewerProvider.MESSAGE_FILTER_KEY, this.messageFilter);
-                        this._sendFilteredLogsToWebview();
-                        return;
-                    case 'getInitialLogs':
-                        this._sendFilteredLogsToWebview();
-                        return;
-                    case 'webviewClearButtonPressed':
-                        this.handleWebviewClear();
-                        return;
-                    case 'copilotViewRequested':
-                        vscode.commands.executeCommand('unrealLogViewer.showLogsAsText');
-                        return;
-                    case 'togglePause':
-                        this.togglePauseState();
-                        return;
-                }
-            },
+            message => this._handleWebviewMessage(message),
             undefined,
             this.context.subscriptions
         );
         this._updateCountsInWebview();
+    }
+
+    private _handleWebviewMessage(message: {
+        command: 'applyFilters';
+        levelFilter?: string;
+        categoryFilter?: string;
+        messageFilter?: string;
+    } | {
+        command: 'getInitialLogs';
+    } | {
+        command: 'webviewClearButtonPressed';
+    } | {
+        command: 'copilotViewRequested';
+    } | {
+        command: 'togglePause';
+    }) {
+        switch (message.command) {
+            case 'applyFilters':
+                this.levelFilter = message.levelFilter?.trim() || '';
+                this.categoryFilter = message.categoryFilter?.trim() || '';
+                this.messageFilter = message.messageFilter?.trim() || '';
+                this.context.workspaceState.update(UnrealLogViewerProvider.LEVEL_FILTER_KEY, this.levelFilter);
+                this.context.workspaceState.update(UnrealLogViewerProvider.CATEGORY_FILTER_KEY, this.categoryFilter);
+                this.context.workspaceState.update(UnrealLogViewerProvider.MESSAGE_FILTER_KEY, this.messageFilter);
+                this._sendFilteredLogsToWebview();
+                return;
+            case 'getInitialLogs':
+                this._sendFilteredLogsToWebview();
+                return;
+            case 'webviewClearButtonPressed':
+                this.handleWebviewClear();
+                return;
+            case 'copilotViewRequested':
+                vscode.commands.executeCommand('unrealLogViewer.showLogsAsText');
+                return;
+            case 'togglePause':
+                this.togglePauseState();
+                return;
+        }
     }
 
     public requestLogRefresh(): void {
@@ -131,14 +181,76 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private _formatDate(originalDateString: string): string {
-        const config = vscode.workspace.getConfiguration('unrealLogViewer');
-        const useRelative = config.get<boolean>('useRelativeTimestamps', false);
-        const logDate = new Date(originalDateString);
+    /**
+     * Retrieves the currently filtered and formatted log entries, primarily for testing purposes.
+     * This method mimics the data that would be sent to the webview.
+     * @returns An array of log entries as they would be displayed (after filtering and formatting).
+     */
+    public getDisplayedLogEntriesForTest(): Pick<UnrealLogEntry, 'date' | 'level' | 'category' | 'message' | 'source'>[] {
+        if (this.isPaused) {
+            return this.displayedLogsOnPause;
+        }
+        return this.logs
+            .filter(log => this._passesFilters(log))
+            .map(log => ({
+                date: this._formatDate(log.date),
+                level: log.level,
+                category: log.category,
+                message: log.message,
+                source: log.source || undefined
+            }));
+    }
 
-        if (useRelative) {
+    /**
+     * Sets the filters programmatically for testing.
+     * @param filters An object containing level, category, and/or message filters.
+     */
+    public setFiltersForTest(filters: { level?: string; category?: string; message?: string }): void {
+        this.levelFilter = filters.level?.trim() ?? this.levelFilter;
+        this.categoryFilter = filters.category?.trim() ?? this.categoryFilter;
+        this.messageFilter = filters.message?.trim() ?? this.messageFilter;
+
+        this.context.workspaceState.update(UnrealLogViewerProvider.LEVEL_FILTER_KEY, this.levelFilter);
+        this.context.workspaceState.update(UnrealLogViewerProvider.CATEGORY_FILTER_KEY, this.categoryFilter);
+        this.context.workspaceState.update(UnrealLogViewerProvider.MESSAGE_FILTER_KEY, this.messageFilter);
+
+        if (this._view) {
+            this._view.webview.postMessage({
+                command: 'updateFilterInputs',
+                levelFilter: this.levelFilter,
+                categoryFilter: this.categoryFilter,
+                messageFilter: this.messageFilter
+            });
+        }
+        this._sendFilteredLogsToWebview();
+    }
+
+    /**
+     * Toggles the pause state programmatically for testing.
+     */
+    public togglePauseStateForTest(): void {
+        this.togglePauseState();
+    }
+
+    /**
+     * Gets the current pause state for testing.
+     * @returns True if paused, false otherwise.
+     */
+    public getPauseStateForTest(): boolean {
+        return this.isPaused;
+    }
+
+    private _formatDate(originalDateString: string): string {
+        // Remove trailing 'Z' if it exists to handle UTC ISO strings more flexibly
+        const dateStringToParse = originalDateString.endsWith('Z') 
+            ? originalDateString.slice(0, -1) 
+            : originalDateString;
+
+        const logDate = new Date(dateStringToParse);
+
+        if (this._useRelativeTimestamps) { // Use cached property
             let diffMs = logDate.getTime() - this.lastClearTime.getTime();
-            diffMs = Math.max(0, diffMs);
+            diffMs = Math.max(0, diffMs); // Ensure no negative diffs if system time changed or logs are from the future
 
             const milliseconds = (diffMs % 1000).toString().padStart(3, '0');
             const totalSeconds = Math.floor(diffMs / 1000);
@@ -158,133 +270,12 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
     }
 
     public _passesFilters(log: UnrealLogEntry): boolean {
-        let passesLevelFilter = true;
-        const currentLevelFilter = this.levelFilter.trim();
-
-        if (currentLevelFilter) {
-            const logLev = (typeof log.level === 'string' ? log.level.trim() : '').toUpperCase();
-            const filterTerms = currentLevelFilter.split(',').map(term => term.trim()).filter(term => term !== '');
-
-            const exclusiveLevels = filterTerms
-                .filter(term => term.startsWith('!'))
-                .map(term => term.substring(1).toUpperCase())
-                .filter(term => term !== '');
-
-            const inclusiveLevels = filterTerms
-                .filter(term => !term.startsWith('!'))
-                .map(term => term.toUpperCase())
-                .filter(term => term !== '');
-
-            if (exclusiveLevels.length > 0) {
-                for (const excLevel of exclusiveLevels) {
-                    if (logLev === excLevel) {
-                        passesLevelFilter = false;
-                        break;
-                    }
-                }
-            }
-
-            if (passesLevelFilter && inclusiveLevels.length > 0) {
-                let matchesInclusive = false;
-                for (const incLevel of inclusiveLevels) {
-                    if (incLevel.startsWith('>')) {
-                        const targetLevelName = incLevel.substring(1);
-                        const targetLevelIndex = UnrealLogViewerProvider.LOG_LEVEL_ORDER.indexOf(targetLevelName);
-                        const logLevelIndex = UnrealLogViewerProvider.LOG_LEVEL_ORDER.indexOf(logLev);
-                        if (targetLevelIndex !== -1 && logLevelIndex !== -1 && logLevelIndex >= targetLevelIndex) {
-                            matchesInclusive = true;
-                            break;
-                        }
-                    } else {
-                        if (logLev === incLevel) {
-                            matchesInclusive = true;
-                            break;
-                        }
-                    }
-                }
-                passesLevelFilter = matchesInclusive;
-            } else if (passesLevelFilter && inclusiveLevels.length === 0 && exclusiveLevels.length > 0) {
-                passesLevelFilter = true;
-            } else if (inclusiveLevels.length === 0 && exclusiveLevels.length === 0) {
-                passesLevelFilter = true;
-            }
-        }
-
-        let passesCategoryFilter = true;
-        const currentCategoryFilter = this.categoryFilter.trim();
-        if (currentCategoryFilter) {
-            const logCategoryUpper = log.category.toUpperCase();
-            const filterTerms = currentCategoryFilter.split(',').map(term => term.trim()).filter(term => term !== '');
-
-            const exclusiveCategories = filterTerms
-                .filter(term => term.startsWith('!'))
-                .map(term => term.substring(1).toUpperCase())
-                .filter(term => term !== '');
-
-            const inclusiveCategories = filterTerms
-                .filter(term => !term.startsWith('!'))
-                .map(term => term.toUpperCase())
-                .filter(term => term !== '');
-
-            if (exclusiveCategories.length > 0) {
-                for (const excCat of exclusiveCategories) {
-                    if (logCategoryUpper.includes(excCat)) {
-                        passesCategoryFilter = false;
-                        break;
-                    }
-                }
-            }
-
-            if (passesCategoryFilter && inclusiveCategories.length > 0) {
-                let matchesInclusive = false;
-                for (const incCat of inclusiveCategories) {
-                    if (logCategoryUpper.includes(incCat)) {
-                        matchesInclusive = true;
-                        break;
-                    }
-                }
-                passesCategoryFilter = matchesInclusive;
-            }
-        }
-
-        let passesMessageFilter = true;
-        const currentMessageFilter = this.messageFilter.trim();
-        if (currentMessageFilter) {
-            const logMessageUpper = log.message.toUpperCase();
-            const filterTerms = currentMessageFilter.split(',').map(term => term.trim()).filter(term => term !== '');
-
-            const exclusiveMessages = filterTerms
-                .filter(term => term.startsWith('!'))
-                .map(term => term.substring(1).toUpperCase())
-                .filter(term => term !== '');
-
-            const inclusiveMessages = filterTerms
-                .filter(term => !term.startsWith('!'))
-                .map(term => term.toUpperCase())
-                .filter(term => term !== '');
-
-            if (exclusiveMessages.length > 0) {
-                for (const excMsg of exclusiveMessages) {
-                    if (logMessageUpper.includes(excMsg)) {
-                        passesMessageFilter = false;
-                        break;
-                    }
-                }
-            }
-
-            if (passesMessageFilter && inclusiveMessages.length > 0) {
-                let matchesInclusive = false;
-                for (const incMsg of inclusiveMessages) {
-                    if (logMessageUpper.includes(incMsg)) {
-                        matchesInclusive = true;
-                        break;
-                    }
-                }
-                passesMessageFilter = matchesInclusive;
-            }
-        }
-
-        return passesLevelFilter && passesCategoryFilter && passesMessageFilter;
+        return passesLogFilters(log, {
+            levelFilter: this.levelFilter,
+            categoryFilter: this.categoryFilter,
+            messageFilter: this.messageFilter,
+            logLevelOrder: UnrealLogViewerProvider.LOG_LEVEL_ORDER
+        });
     }
 
     public addLog(log: UnrealLogEntry) {
@@ -305,7 +296,6 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
 
         this.logs.push(log);
 
-        // Only update the webview if not paused
         if (!this.isPaused && this._view) {
             if (pruned) {
                 const pruneLogEntry: UnrealLogEntry = {
@@ -331,7 +321,6 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
             }
             this._updateCountsInWebview();
         } else if (this._view) {
-            // If paused, still update the counter
             this._updateCountsInWebview();
         }
     }
@@ -355,12 +344,11 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
     private handleWebviewClear(): void {
         this.logs = [];
         this.lastClearTime = new Date();
-        this._lastShownCountWhenPaused = 0; // Reset shown count cache when clearing
+        this._lastShownCountWhenPaused = 0;
         if (this._view) {
             this._view.webview.postMessage({ command: 'setLogs', logs: [] });
             this._updateCountsInWebview();
         }
-        // Call the callback for Copilot/text view refresh if set
         if (this.onLogsCleared) {
             this.onLogsCleared();
         }
@@ -382,9 +370,18 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
     private togglePauseState(): void {
         this.isPaused = !this.isPaused;
         if (this.isPaused) {
-            // Cache the shown count BEFORE updating the view
-            this._lastShownCountWhenPaused = this.logs.filter(log => this._passesFilters(log)).length;
+            this.displayedLogsOnPause = this.logs
+                .filter(log => this._passesFilters(log))
+                .map(log => ({
+                    date: this._formatDate(log.date),
+                    level: log.level,
+                    category: log.category,
+                    message: log.message,
+                    source: log.source || undefined
+                }));
+            this._lastShownCountWhenPaused = this.displayedLogsOnPause.length;
         } else {
+            this.displayedLogsOnPause = [];
             this._lastShownCountWhenPaused = undefined;
         }
         if (this._view) {
@@ -393,7 +390,6 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         if (!this.isPaused) {
             this._sendFilteredLogsToWebview();
         } else if (this._view) {
-            // When pausing, update the counter immediately to avoid off-by-one
             this._updateCountsInWebview();
         }
     }

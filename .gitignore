@@ -19,6 +19,9 @@ yarn-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# VS Code Extension Test Output
+.vscode-test/
+
 # VS Code Extension packaging
 *.vsix
 
