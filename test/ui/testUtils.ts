@@ -2,13 +2,26 @@ import * as vscode from 'vscode';
 import * as assert from 'assert';
 import * as net from 'net';
 
-// Define and export delay constants
-export const SETUP_COMPLETION_DELAY_MS = 100;
-export const COMMAND_EXECUTION_DELAY_MS = 100;
-export const LOG_PROCESSING_DELAY_MS = 200;
-export const PAUSE_STATE_CHECK_DELAY_MS = 50;
-export const RESUME_LOG_DISPLAY_DELAY_MS = 300;
-export const WEBVIEW_READY_DELAY_MS = 500; // Added constant for webview readiness
+// Global scalar for adjusting delays
+let globalDelayScalar = 1;
+
+// Function to set the global delay scalar
+export function setGlobalDelayScalar(newScalar: number): void {
+  if (newScalar > 0) {
+    globalDelayScalar = newScalar;
+  } else {
+    console.warn('Attempted to set globalDelayScalar to a non-positive value. Scalar remains unchanged.');
+  }
+}
+
+// Define and export delay functions
+export function getSetupCompletionDelayMs(): number { return 100 * globalDelayScalar; }
+export function getCommandExecutionDelayMs(): number { return 100 * globalDelayScalar; }
+export function getLogProcessingDelayMs(): number { return 200 * globalDelayScalar; }
+export function getPauseStateCheckDelayMs(): number { return 50 * globalDelayScalar; }
+export function getResumeLogDisplayDelayMs(): number { return 300 * globalDelayScalar; }
+export function getWebviewReadyDelayMs(): number { return 500 * globalDelayScalar; }
+
 export const TEST_PORT = 9876;
 
 // Define a type for the expected log entry structure returned by the command
@@ -34,16 +47,16 @@ export async function activateExtension() {
   assert.ok(extension!.isActive, 'Extension should be active.');
 }
 
-// Helper function to focus the Unreal Log Viewer and arrange layout
+// Helper function to focus the Unreal Log Viewer
 export async function focusUnrealLogView() {
   console.log('Attempting to focus the Unreal Log Viewer view...');
 
-  // Step 1: Focus/Open the Unreal Log Viewer view.
+  // Focus/Open the Unreal Log Viewer view.
   // This should now open it in the panel by default as per package.json.
   await vscode.commands.executeCommand('unrealLogViewerView3.focus');
   console.log('Unreal Log Viewer focus command executed.');
-  // Use WEBVIEW_READY_DELAY_MS as it might be opening for the first time and needs to load content.
-  await delay(WEBVIEW_READY_DELAY_MS);
+  // Use getWebviewReadyDelayMs as it might be opening for the first time and needs to load content.
+  await delay(getWebviewReadyDelayMs());
   console.log('Unreal Log Viewer should now be focused in the panel.');
 }
 

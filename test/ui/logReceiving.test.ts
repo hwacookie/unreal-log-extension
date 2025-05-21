@@ -1,15 +1,15 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { 
-    SETUP_COMPLETION_DELAY_MS, 
-    COMMAND_EXECUTION_DELAY_MS, 
-    LOG_PROCESSING_DELAY_MS, 
+    getSetupCompletionDelayMs, // Updated
+    getCommandExecutionDelayMs, // Updated
+    getLogProcessingDelayMs, // Updated
     TEST_PORT,
     TestLogEntry,
     delay, 
     activateExtension, 
     focusUnrealLogView, 
-    clearLogs, // Added back clearLogs import
+    clearLogs, 
     sendTcpLogMessage, 
     getAndVerifyLogEntry
 } from './testUtils';
@@ -31,9 +31,9 @@ describe('Unreal Log Viewer - Basic Log Reception', function () {
     };
     const testLogMessage = JSON.stringify(testLog) + '\n';
 
-    await delay(LOG_PROCESSING_DELAY_MS); // Use constant
+    await delay(getLogProcessingDelayMs()); // Updated
     await sendTcpLogMessage(TEST_PORT, testLogMessage, 'Basic Reception Test: '); // Use TEST_PORT
-    await delay(COMMAND_EXECUTION_DELAY_MS); // Use constant
+    await delay(getCommandExecutionDelayMs()); // Updated
 
     const receivedLog = await getAndVerifyLogEntry(testLog, 'Basic Reception Test');
     assert.ok(receivedLog, 'The basic test log entry should be present.');
@@ -100,7 +100,7 @@ describe('Unreal Log Viewer - Timestamp Formatting Tests', function () {
     await config.update(formatKey, originalTimestampFormatForTimestampTests, vscode.ConfigurationTarget.Global);
     await config.update(formatKey, undefined, vscode.ConfigurationTarget.Workspace); // Clear potential workspace override
 
-    await delay(COMMAND_EXECUTION_DELAY_MS * 5); // Ensure settings are restored
+    await delay(getCommandExecutionDelayMs() * 5); // Updated
     console.log(`Timestamp Suite - AFTER - Settings restored. Effective ${settingKey}: ${config.get(settingKey)}, Effective ${formatKey}: ${config.get(formatKey)}`);
     const finalInspection = config.inspect<boolean>(settingKey);
     console.log(`Timestamp Suite - AFTER - Final inspection of ${settingKey} after restore:`, JSON.stringify(finalInspection, null, 2));
@@ -110,7 +110,7 @@ describe('Unreal Log Viewer - Timestamp Formatting Tests', function () {
     // Each test will now be responsible for setting its config and then clearing logs.
     console.log("Timestamp Suite - beforeEach: (No longer clearing logs here)");
     // Ensure any config changes from a previous test in this suite are processed before the next one starts.
-    await delay(SETUP_COMPLETION_DELAY_MS); 
+    await delay(getSetupCompletionDelayMs()); // Updated
   });
   
   it('test 0002: should display absolute timestamp correctly (HH:mm:ss.SSS)', async function () {
@@ -141,14 +141,14 @@ describe('Unreal Log Viewer - Timestamp Formatting Tests', function () {
 
     // Clear logs AFTER settings are applied and verified for this test
     await clearLogs(); 
-    await delay(LOG_PROCESSING_DELAY_MS); 
+    await delay(getLogProcessingDelayMs()); // Updated
 
     const currentIsoTimestamp = new Date().toISOString(); 
     const testLog: TestLogEntry = { ...baseLogEntry, date: currentIsoTimestamp }; 
     const testLogMessage = JSON.stringify(testLog) + '\n';
 
     await sendTcpLogMessage(TEST_PORT, testLogMessage, 'Absolute Timestamp Test: '); // Use TEST_PORT
-    await delay(LOG_PROCESSING_DELAY_MS * 2); 
+    await delay(getLogProcessingDelayMs() * 2); // Updated
 
     const receivedLog = await getAndVerifyLogEntry(testLog, 'Absolute Timestamp Test');
     assert.ok(receivedLog, 'Log entry for absolute timestamp test should be present.');
@@ -199,14 +199,14 @@ describe('Unreal Log Viewer - Timestamp Formatting Tests', function () {
 
     // Clear logs AFTER settings are applied and verified
     await clearLogs(); 
-    await delay(LOG_PROCESSING_DELAY_MS);
+    await delay(getLogProcessingDelayMs()); // Updated
     
     const currentIsoTimestamp = new Date().toISOString();
     const testLog: TestLogEntry = { ...baseLogEntry, date: currentIsoTimestamp, category: 'RelativeTimestampTest' }; 
     const testLogMessage = JSON.stringify(testLog) + '\n';
     
     await sendTcpLogMessage(TEST_PORT, testLogMessage, 'Relative Timestamp Test: '); // Use TEST_PORT
-    await delay(LOG_PROCESSING_DELAY_MS * 2); // Increased delay for processing
+    await delay(getLogProcessingDelayMs() * 2); // Updated
 
     const receivedLog = await getAndVerifyLogEntry(testLog, 'Relative Timestamp Test');
     assert.ok(receivedLog, 'Log entry for relative timestamp test should be present.');

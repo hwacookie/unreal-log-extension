@@ -1,18 +1,16 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
-import { 
-    activateExtension, 
-    clearLogs, 
-    getDisplayedLogMessages, 
-    sendTcpLogMessage, 
-    focusUnrealLogView, 
-    delay 
-} from './testUtils'; // Updated import path
-import { 
-    LOG_PROCESSING_DELAY_MS, 
-    COMMAND_EXECUTION_DELAY_MS, 
-    SETUP_COMPLETION_DELAY_MS, 
-    TEST_PORT 
+import {
+    activateExtension,
+    clearLogs,
+    getDisplayedLogMessages,
+    sendTcpLogMessage,
+    focusUnrealLogView,
+    delay,
+    getLogProcessingDelayMs, // Updated
+    getCommandExecutionDelayMs, // Updated
+    getSetupCompletionDelayMs, // Updated
+    TEST_PORT
 } from './testUtils';
 
 describe('Pause Functionality Tests', () => {
@@ -27,26 +25,25 @@ describe('Pause Functionality Tests', () => {
         originalTimestampFormat = config.get('timestampFormat');
         await config.update('useRelativeTimestamps', false, vscode.ConfigurationTarget.Global);
         await config.update('timestampFormat', 'HH:mm:ss.SSS', vscode.ConfigurationTarget.Global);
-        await delay(SETUP_COMPLETION_DELAY_MS);
+        await delay(getSetupCompletionDelayMs()); // Updated
     });
 
     after(async () => {
         const config = vscode.workspace.getConfiguration('unrealLogViewer');
         await config.update('useRelativeTimestamps', originalUseRelativeTimestamps, vscode.ConfigurationTarget.Global);
         await config.update('timestampFormat', originalTimestampFormat, vscode.ConfigurationTarget.Global);
-        await delay(COMMAND_EXECUTION_DELAY_MS);
+        await delay(getCommandExecutionDelayMs()); // Updated
     });
 
     beforeEach(async () => {
         await focusUnrealLogView();
         await clearLogs();
-        // Ensure filters are cleared for pause tests, as they might interact
         await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: '', categoryFilter: '', messageFilter: '' });
         const isPaused: boolean | undefined = await vscode.commands.executeCommand('unrealLogViewer.getPauseStateForTest');
         if (isPaused) {
-            await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest'); // Ensure starts unpaused
+            await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest');
         }
-        await delay(SETUP_COMPLETION_DELAY_MS);
+        await delay(getSetupCompletionDelayMs()); // Updated
     });
 
     afterEach(async () => {
@@ -56,27 +53,26 @@ describe('Pause Functionality Tests', () => {
             await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest');
         }
         await clearLogs();
-        // Clear filters after pause tests
         await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: '', categoryFilter: '', messageFilter: '' });
-        await delay(COMMAND_EXECUTION_DELAY_MS);
+        await delay(getCommandExecutionDelayMs()); // Updated
     });
 
     it('test 0009: should not display new logs when paused', async () => {
         const initialLog = { date: new Date().toISOString(), level: 'Log', category: 'PauseTest.0009', message: 'Initial log before pause 0009' };
         await sendTcpLogMessage(TEST_PORT, JSON.stringify(initialLog));
-        await delay(LOG_PROCESSING_DELAY_MS);
+        await delay(getLogProcessingDelayMs()); // Updated
 
         let displayedLogs = await getDisplayedLogMessages();
         assert.strictEqual(displayedLogs.length, 1, 'Test 0009: Initial log should be displayed');
 
         await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest');
-        await delay(COMMAND_EXECUTION_DELAY_MS);
+        await delay(getCommandExecutionDelayMs()); // Updated
         const isPaused: boolean | undefined = await vscode.commands.executeCommand('unrealLogViewer.getPauseStateForTest');
         assert.strictEqual(isPaused, true, 'Test 0009: Should be paused');
 
         const pausedLog = { date: new Date().toISOString(), level: 'Warning', category: 'PauseTest.0009', message: 'Log sent while paused 0009' };
         await sendTcpLogMessage(TEST_PORT, JSON.stringify(pausedLog));
-        await delay(LOG_PROCESSING_DELAY_MS);
+        await delay(getLogProcessingDelayMs()); // Updated
 
         displayedLogs = await getDisplayedLogMessages();
         assert.strictEqual(displayedLogs.length, 1, 'Test 0009: No new logs should be displayed when paused. Count should be 1.');
@@ -85,7 +81,7 @@ describe('Pause Functionality Tests', () => {
 
     it('test 0010: should display queued logs when resumed', async () => {
         await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest');
-        await delay(COMMAND_EXECUTION_DELAY_MS);
+        await delay(getCommandExecutionDelayMs()); // Updated
         const isPausedStateBeforeSending: boolean | undefined = await vscode.commands.executeCommand('unrealLogViewer.getPauseStateForTest');
         assert.strictEqual(isPausedStateBeforeSending, true, 'Test 0010: Should be paused initially');
 
@@ -94,13 +90,13 @@ describe('Pause Functionality Tests', () => {
 
         await sendTcpLogMessage(TEST_PORT, JSON.stringify(logWhilePaused1));
         await sendTcpLogMessage(TEST_PORT, JSON.stringify(logWhilePaused2));
-        await delay(LOG_PROCESSING_DELAY_MS);
+        await delay(getLogProcessingDelayMs()); // Updated
 
         let displayedLogs = await getDisplayedLogMessages();
         assert.strictEqual(displayedLogs.length, 0, 'Test 0010: No logs should be displayed while paused and before any initial logs in this test context');
 
         await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest'); // Resume
-        await delay(LOG_PROCESSING_DELAY_MS); // Allow time for queued logs to process
+        await delay(getLogProcessingDelayMs()); // Updated
 
         displayedLogs = await getDisplayedLogMessages();
         assert.strictEqual(displayedLogs.length, 2, 'Test 0010: Queued logs should be displayed after resume');
@@ -113,12 +109,12 @@ describe('Pause Functionality Tests', () => {
         assert.strictEqual(initialPauseState, false, 'Test 0011: Initial pause state should be false');
 
         await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest');
-        await delay(COMMAND_EXECUTION_DELAY_MS);
+        await delay(getCommandExecutionDelayMs()); // Updated
         const pausedState: boolean | undefined = await vscode.commands.executeCommand('unrealLogViewer.getPauseStateForTest');
         assert.strictEqual(pausedState, true, 'Test 0011: Pause state should be true after toggling once');
 
         await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest');
-        await delay(COMMAND_EXECUTION_DELAY_MS);
+        await delay(getCommandExecutionDelayMs()); // Updated
         const unpausedState: boolean | undefined = await vscode.commands.executeCommand('unrealLogViewer.getPauseStateForTest');
         assert.strictEqual(unpausedState, false, 'Test 0011: Pause state should be false after toggling again');
     });

@@ -1,18 +1,18 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode'; // Added import for vscode
 import {
-    COMMAND_EXECUTION_DELAY_MS,
     delay,
     activateExtension,
     focusUnrealLogView,
     getWebviewElements,
-    WEBVIEW_READY_DELAY_MS
+    getWebviewReadyDelayMs,
+    getCommandExecutionDelayMs,
 } from './testUtils';
 
 before(async () => {
     await activateExtension();
     await focusUnrealLogView();
-    await delay(WEBVIEW_READY_DELAY_MS); // Ensure webview is ready
+    await delay(getWebviewReadyDelayMs()); // Ensure webview is ready
 });
 
 describe('Unreal Log Viewer - Filter Controls UI Tests', function () {
@@ -20,7 +20,7 @@ describe('Unreal Log Viewer - Filter Controls UI Tests', function () {
         this.timeout(20000); // Increased timeout for UI operations
 
         await focusUnrealLogView(); // Ensure the view is focused
-        await delay(WEBVIEW_READY_DELAY_MS);
+        await delay(getWebviewReadyDelayMs());
 
         // 1. Get initial state of the filter container
         let filterControlsElements = await getWebviewElements('#filter-controls');
@@ -32,7 +32,7 @@ describe('Unreal Log Viewer - Filter Controls UI Tests', function () {
         // 2. Execute the command to toggle filter bar visibility
         console.log('Executing command unrealLogViewer.toggleFilterBarVisibility...');
         await vscode.commands.executeCommand('unrealLogViewer.toggleFilterBarVisibility');
-        await delay(COMMAND_EXECUTION_DELAY_MS + 200); // Allow UI to update (added a bit more delay for message passing)
+        await delay(getCommandExecutionDelayMs() + 200); // Allow UI to update (added a bit more delay for message passing)
 
         // 3. Get new state of the filter container
         filterControlsElements = await getWebviewElements('#filter-controls');
@@ -48,7 +48,7 @@ describe('Unreal Log Viewer - Filter Controls UI Tests', function () {
         // 4. Execute the command again to toggle back
         console.log('Executing command unrealLogViewer.toggleFilterBarVisibility again...');
         await vscode.commands.executeCommand('unrealLogViewer.toggleFilterBarVisibility');
-        await delay(COMMAND_EXECUTION_DELAY_MS + 200); // Allow UI to update
+        await delay(getCommandExecutionDelayMs() + 200); // Allow UI to update
 
         // 5. Get final state of the filter container
         filterControlsElements = await getWebviewElements('#filter-controls');
