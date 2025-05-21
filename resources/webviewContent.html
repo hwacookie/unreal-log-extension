@@ -128,7 +128,7 @@
     </style>
 </head>
 <body>
-    <div id="filter-controls">
+    <div id="filter-controls" class="hidden">
         <vscode-text-field id="levelFilterInput" placeholder="Filter Level" title="Filter by log level. Examples:&#10;- 'Error,Warning' (shows Error or Warning)&#10;- '!Verbose' (hides Verbose)&#10;- '>Warning' (shows Warning, Error, Fatal)&#10;- 'Error,!LogTemp' (shows Error, hides LogTemp category if used with category filter)"></vscode-text-field>
         <vscode-text-field id="categoryFilterInput" placeholder="Filter Category" title="Filter by log category. Examples:&#10;- 'LogAI,LogNet' (shows LogAI or LogNet)&#10;- '!LogTemp' (hides LogTemp)&#10;- 'AI' (shows categories containing 'AI')&#10;- 'MyCat,!Internal' (shows MyCat, hides Internal)"></vscode-text-field>
         <vscode-text-field id="messageFilterInput" placeholder="Filter Message" title="Filter by log message content. Examples:&#10;- 'Player,Spawn' (message contains Player or Spawn)&#10;- '!Debug' (message does not contain Debug)&#10;- 'Error 123' (message contains 'Error 123')"></vscode-text-field>
@@ -156,6 +156,11 @@
         const logEntriesTableBody = document.getElementById('log-entries');
         const logTableContainer = document.getElementById('log-table-container');
         const filterControls = document.getElementById('filter-controls');
+
+        // Ensure filter controls are hidden by default
+        if (filterControls) {
+            filterControls.classList.add('hidden');
+        }
 
         let showSrcColumn = false;
 
@@ -327,6 +332,64 @@
                     break;
                 }
                 case 'updateLogCounts':
+                    break;
+                // Add handlers for test automation messages
+                case 'getElements':
+                    try {
+                        const elements = Array.from(document.querySelectorAll(message.selector)).map(el => {
+                            const style = window.getComputedStyle(el);
+                            const styleObject = {};
+                            for (let i = 0; i < style.length; i++) {
+                                const propName = style[i];
+                                styleObject[propName] = style.getPropertyValue(propName);
+                            }
+                            return {
+                                id: el.id,
+                                tag: el.tagName,
+                                attributes: Array.from(el.attributes).reduce((acc, attr) => {
+                                    acc[attr.name] = attr.value;
+                                    return acc;
+                                }, {}),
+                                style: styleObject,
+                                innerHTML: el.innerHTML,
+                                textContent: el.textContent
+                            };
+                        });
+                        vscode.postMessage({
+                            command: 'response:getElements',
+                            requestId: message.requestId,
+                            elements: elements
+                        });
+                    } catch (e) {
+                        vscode.postMessage({
+                            command: 'response:getElements',
+                            requestId: message.requestId,
+                            elements: [],
+                            error: e.message
+                        });
+                    }
+                    break;
+                case 'clickElement':
+                    try {
+                        const element = document.getElementById(message.elementId);
+                        let success = false;
+                        if (element) {
+                            element.click();
+                            success = true;
+                        }
+                        vscode.postMessage({
+                            command: 'response:clickElement',
+                            requestId: message.requestId,
+                            success: success
+                        });
+                    } catch (e) {
+                        vscode.postMessage({
+                            command: 'response:clickElement',
+                            requestId: message.requestId,
+                            success: false,
+                            error: e.message
+                        });
+                    }
                     break;
             }
         });

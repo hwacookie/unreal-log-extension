@@ -7,6 +7,7 @@ import { WebviewMessageHandler, WebviewMessage, WebviewActions } from './Webview
 import { DateFormatter } from './DateFormatter';
 import { WebviewAppearanceManager } from './WebviewAppearanceManager';
 import { WebviewViewUpdater, WebviewLog } from './WebviewViewUpdater';
+import { WebviewElement } from '../test/ui/testUtils'; // Added import
 
 export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'unrealLogViewerView3';
@@ -329,5 +330,51 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         if (this._webviewView) {
             this._webviewView.webview.postMessage({ command: 'toggleFilterBar' });
         }
+    }
+
+    // Method to get elements from the webview for testing
+    public async getWebviewElementsBySelector(selector: string): Promise<WebviewElement[]> { // Return type as WebviewElement[]
+        if (!this._webviewView) {
+            return Promise.reject("Webview is not available.");
+        }
+        const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        this._webviewView.webview.postMessage({ command: 'getElements', selector: selector, requestId: requestId });
+
+        return new Promise((resolve, reject) => {
+            const disposable = this._webviewView!.webview.onDidReceiveMessage(message => {
+                if (message.command === 'response:getElements' && message.requestId === requestId) {
+                    disposable.dispose();
+                    resolve(message.elements);
+                }
+            });
+            // Timeout to prevent tests from hanging indefinitely
+            setTimeout(() => {
+                disposable.dispose();
+                reject(new Error(`Timeout waiting for response from webview for getElements with selector: ${selector}`));
+            }, 5000); // 5-second timeout
+        });
+    }
+
+    // Method to click an element in the webview for testing
+    public async clickWebviewElement(elementId: string): Promise<boolean> {
+        if (!this._webviewView) {
+            return Promise.reject("Webview is not available.");
+        }
+        const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        this._webviewView.webview.postMessage({ command: 'clickElement', elementId: elementId, requestId: requestId });
+
+        return new Promise((resolve, reject) => {
+            const disposable = this._webviewView!.webview.onDidReceiveMessage(message => {
+                if (message.command === 'response:clickElement' && message.requestId === requestId) {
+                    disposable.dispose();
+                    resolve(message.success);
+                }
+            });
+            // Timeout
+            setTimeout(() => {
+                disposable.dispose();
+                reject(new Error(`Timeout waiting for response from webview for clickElement with ID: ${elementId}`));
+            }, 5000); // 5-second timeout
+        });
     }
 }

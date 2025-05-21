@@ -11,27 +11,12 @@
 		"url": "https://github.com/hwacookie/unreal-log-extension"
 	},
 	"engines": {
-		"vscode": "^1.73.0"
+		"vscode": "^1.75.0"
 	},
 	"categories": [
 		"Other"
 	],
-	"activationEvents": [
-		"onView:unrealLogViewerView3",
-		"onCommand:unrealLogViewer.create",
-		"onCommand:unrealLogViewer.clear",
-		"onCommand:unrealLogViewer.applyServerPortChange",
-		"onCommand:unrealLogViewer.showLogsAsText",
-		"onCommand:unrealLogViewer.getDisplayedLogMessagesForTest",
-		"onCommand:unrealLogViewer.setFiltersForTest",
-		"onCommand:unrealLogViewer.togglePauseForTest",
-		"onCommand:unrealLogViewer.getPauseStateForTest",
-		"onCommand:unrealLogViewer.titleBarClear",
-		"onCommand:unrealLogViewer.titleBarCopilotView",
-		"onCommand:unrealLogViewer.titleBarPauseLogs",
-		"onCommand:unrealLogViewer.titleBarResumeLogs",
-		"onCommand:unrealLogViewer.toggleFilterBarVisibility"
-	],
+	"activationEvents": [],
 	"main": "./out/src/extension.js",
 	"contributes": {
 		"commands": [
@@ -133,16 +118,17 @@
 			}
 		},
 		"viewsContainers": {
-			"activitybar": [
+			"activitybar": [],
+			"panel": [
 				{
-					"id": "unrealLogViewerContainer",
+					"id": "unrealLogViewerPanelContainer",
 					"title": "Unreal Log Viewer",
 					"icon": "resources/unreal-log-viewer.svg"
 				}
 			]
 		},
 		"views": {
-			"unrealLogViewerContainer": [
+			"unrealLogViewerPanelContainer": [
 				{
 					"id": "unrealLogViewerView3",
 					"name": "Unreal Log Viewer",

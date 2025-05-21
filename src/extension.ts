@@ -89,12 +89,12 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('unrealLogViewer.create', () => {
 			console.log('Unreal Log Viewer: create command invoked.');
-			vscode.commands.executeCommand('workbench.view.extension.unrealLogViewerContainer').then(() => {
-				vscode.commands.executeCommand('unrealLogViewerView3.focus');
-				console.log('Unreal Log Viewer container shown.');
-			}, (containerErr) => {
-				console.error('Error opening Unreal Log Viewer container:', containerErr);
-				vscode.window.showErrorMessage('Failed to open Unreal Log Viewer container.');
+			// Directly focus the view. VS Code will handle making its panel container visible.
+			vscode.commands.executeCommand('unrealLogViewerView3.focus').then(() => {
+				console.log('Unreal Log Viewer view focused (should be in panel).');
+			}, (err) => {
+				console.error('Error focusing Unreal Log Viewer view (unrealLogViewerView3.focus):', err);
+				vscode.window.showErrorMessage('Failed to focus Unreal Log Viewer (unrealLogViewerView3).');
 			});
 		})
 	);
@@ -252,6 +252,23 @@ export function activate(context: vscode.ExtensionContext) {
 		const initialPauseState = unrealLogViewerProviderInstance.paused;
 		vscode.commands.executeCommand('setContext', 'unrealLogViewerIsPaused', initialPauseState);
 	}
+
+	// Register commands for test automation
+	context.subscriptions.push(vscode.commands.registerCommand('unrealLogViewer.getWebviewElementsBySelectorForTest', async (selector: string) => {
+		if (unrealLogViewerProviderInstance) {
+			return await unrealLogViewerProviderInstance.getWebviewElementsBySelector(selector);
+		}
+		outputChannel?.appendLine('Warning: getWebviewElementsBySelectorForTest called but provider not available.');
+		return []; // Or throw an error if preferred
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('unrealLogViewer.clickWebviewElementForTest', async (elementId: string) => {
+		if (unrealLogViewerProviderInstance) {
+			return await unrealLogViewerProviderInstance.clickWebviewElement(elementId);
+		}
+		outputChannel?.appendLine('Warning: clickWebviewElementForTest called but provider not available.');
+		return false; // Or throw an error if preferred
+	}));
 }
 
 export function deactivate() {

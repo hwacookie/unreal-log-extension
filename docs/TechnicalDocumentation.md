@@ -140,7 +140,7 @@ The extension is primarily built around a few key components:
 
 * **Testing Infrastructure:**
     * **Mocha** and **Mochawesome** have been installed for test execution and reporting.
-    * **UI Tests** (`test/ui/*.test.ts`): These tests use `@vscode/test-electron` to run in a VS Code extension host environment. They cover UI interactions and behavior requiring a live VS Code instance.
+    * **UI Tests** (`test/ui/*.test.ts`): These tests use Mocha and `@vscode/test-electron` to run in a VS Code extension host environment. They cover UI interactions and behavior requiring a live VS Code instance.
     * **Unit Tests** (`test/logFilter.test.ts`): Plain TypeScript/JavaScript unit tests that do not require a full VS Code environment.
     * **Test Scripts (`package.json`):**
         * `test:ui`: Runs UI tests using `ts-node test/ui/runVSCodeTests.ts` (which configures Mochawesome reporting).
@@ -212,7 +212,7 @@ This command executes `mocha out/test/logFilter.test.js`.
 
 #### 8.3.2. UI Tests
 
-These tests interact with the VS Code UI and require a special test environment provided by `@vscode/test-electron`. They are located in `test/ui/`.
+These tests interact with the VS Code UI and require a special test environment provided by `@vscode/test-electron`. They are written using the Mocha testing framework and are located in `test/ui/`.
 
 **Using npm:**
 
