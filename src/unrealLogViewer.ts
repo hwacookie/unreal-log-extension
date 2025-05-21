@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as net from 'net';
-import * as fs from 'fs'; // Added for reading HTML file
 import { UnrealLogEntry } from './logTypes';
 import { UnrealLogViewerProvider } from './UnrealLogViewerProvider';
 

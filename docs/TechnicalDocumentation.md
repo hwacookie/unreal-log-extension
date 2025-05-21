@@ -129,7 +129,7 @@ The extension is primarily built around a few key components:
     * Updated `engines.vscode` to `^1.73.0`.
     * Explicit `activationEvents` array is present.
     * The persistent and problematic `dependencies: { "unreal-log-viewer": "file:" }` entry remains and is still causing `vsce package` errors.
-    * Updated `devDependencies` to include new ESLint and TypeScript-related packages.
+    * Updated `devDependencies` to include new ESLint and TypeScript-related packages, `mocha`, `mochawesome`, `@types/mocha`, `@vscode/test-electron`, `ts-node`.
     * Updated `license` to `GPL-3.0-only` and set `private` to `false`.
 
 * **Packaging Issues:**
@@ -138,6 +138,20 @@ The extension is primarily built around a few key components:
 
 * **Runtime Issue Identified:** The log viewer webview closes when focus is switched away from it. This is likely due to the webview context not being retained. Setting `webview.options.retainContextWhenHidden = true;` in `resolveWebviewView` is the primary recommended fix.
 
+* **Testing Infrastructure:**
+    * **Mocha** and **Mochawesome** have been installed for test execution and reporting.
+    * **UI Tests** (`test/ui/*.test.ts`): These tests use `@vscode/test-electron` to run in a VS Code extension host environment. They cover UI interactions and behavior requiring a live VS Code instance.
+    * **Unit Tests** (`test/logFilter.test.ts`): Plain TypeScript/JavaScript unit tests that do not require a full VS Code environment.
+    * **Test Scripts (`package.json`):**
+        * `test:ui`: Runs UI tests using `ts-node test/ui/runVSCodeTests.ts` (which configures Mochawesome reporting).
+        * `test:ui:full`: Compiles the project and then runs `test:ui`.
+        * `test:unit`: Runs plain unit tests using Mocha directly (`mocha out/test/logFilter.test.js`).
+        * `test`: A top-level script to compile and run both unit and UI tests.
+    * **VS Code Test Explorer Setup:**
+        * The "Mocha Test Explorer" extension (`hbenl.vscode-mocha-test-adapter`) is recommended.
+        * Configuration in `.vscode/settings.json` is set to discover and run only plain unit tests (`out/test/logFilter.test.js`) to avoid conflicts with UI tests that require a different runner and the `vscode` module mock.
+        * A `test/ui/vscode-mock.js` file was created to help with UI test discovery if the glob pattern were to include them, but it's currently not used by the Test Explorer configuration to ensure plain unit tests run reliably.
+
 ## 7. Next Steps / Outstanding Issues
 
 1. **Resolve `package.json` "dependencies" Issue:** Identify and stop the process that automatically re-adds `unreal-log-viewer: "file:"` to `dependencies`. This is critical for successful packaging.
@@ -145,3 +159,96 @@ The extension is primarily built around a few key components:
 3. **Fix Webview Closing Issue:** Implement `retainContextWhenHidden: true` for the webview to prevent it from closing when hidden.
 4. **Successful Packaging:** Once the above are resolved, `vsce package` should produce a valid `.vsix` file.
 5. **Testing:** Thoroughly test the packaged extension.
+
+## 8. Testing Guide
+
+This section outlines how to set up the testing environment and run the different types of tests included in this project.
+
+### 8.1. Prerequisites
+
+Before running tests, ensure you have Node.js and npm installed. Then, install the project dependencies:
+
+```bash
+npm install
+```
+
+This will install all necessary development dependencies, including Mocha, Mochawesome, TypeScript, and the VS Code test utilities.
+
+### 8.2. Compiling the Project
+
+Most tests run against the compiled JavaScript output. Ensure the project is compiled:
+
+```bash
+npm run compile
+```
+
+Alternatively, you can run `npm run watch` in a separate terminal to automatically recompile on file changes.
+
+### 8.3. Running Tests
+
+There are two main types of tests: plain unit tests and UI tests.
+
+#### 8.3.1. Plain Unit Tests
+
+These tests verify individual functions and modules that do not require a full VS Code environment. They are located in `test/` (e.g., `test/logFilter.test.ts`).
+
+**Using npm:**
+
+To run all plain unit tests:
+
+```bash
+npm run test:unit
+```
+
+This command executes `mocha out/test/logFilter.test.js`.
+
+**Using VS Code Test Explorer:**
+
+1.  Install the "Mocha Test Explorer" extension (ID: `hbenl.vscode-mocha-test-adapter`) from the VS Code Marketplace.
+2.  Open the Test view in the VS Code sidebar.
+3.  The plain unit tests (e.g., from `logFilter.test.js`) should be discovered automatically.
+4.  You can run individual tests, suites, or all discovered plain unit tests using the play icons in the Test Explorer.
+    *Note: The current configuration in `.vscode/settings.json` is specifically set up to only discover these plain unit tests for reliable execution in the Test Explorer.*
+
+#### 8.3.2. UI Tests
+
+These tests interact with the VS Code UI and require a special test environment provided by `@vscode/test-electron`. They are located in `test/ui/`.
+
+**Using npm:**
+
+To run all UI tests (this includes compilation):
+
+```bash
+npm run test:ui:full
+```
+
+This command will:
+1.  Compile the project (`npm run compile`).
+2.  Launch a new VS Code instance with the extension loaded.
+3.  Run the UI tests defined in `test/ui/**/*.test.ts`.
+4.  Generate test reports using Mochawesome in the `test-results/mochawesome` directory.
+
+To run UI tests without recompiling (if you've already compiled):
+
+```bash
+npm run test:ui
+```
+
+*Note: UI tests cannot be reliably run directly from the VS Code Test Explorer due to their dependency on a full VS Code environment and specific APIs that are not available in the standard Node.js environment used by the Test Explorer for test discovery/execution.*
+
+#### 8.3.3. Running All Tests
+
+To run a comprehensive test suite that includes compilation, plain unit tests, and UI tests:
+
+```bash
+npm run test
+```
+
+This script will execute `npm run compile`, then `npm run test:unit`, and finally `npm run test:ui`.
+
+### 8.4. Test Reporting
+
+UI tests automatically generate HTML and JSON reports using **Mochawesome**. These reports can be found in:
+`test-results/mochawesome/`
+
+Open the `report.html` file in a web browser to view a detailed report of the UI test run.

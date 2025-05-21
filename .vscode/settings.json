@@ -4,5 +4,11 @@
 		"activityBar.background": "#262D3E",
 		"titleBar.activeBackground": "#353F57",
 		"titleBar.activeForeground": "#FAFAFC"
+	},
+	"mochaExplorer.files": "out/test/logFilter.test.js", // Target only logFilter.test.js
+	"mochaExplorer.ui": "bdd",
+	// "mochaExplorer.require": ["./test/ui/vscode-mock.js"], // vscode-mock disabled
+	"mochaExplorer.env": {
+		// "TS_NODE_PROJECT": "tsconfig.json" 
 	}
 }

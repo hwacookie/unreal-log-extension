@@ -41,26 +41,6 @@
 			{
 				"command": "unrealLogViewer.applyServerPortChange",
 				"title": "Unreal Log Viewer: Apply Server Port Change"
-			},
-			{
-				"command": "unrealLogViewer.showLogsAsText",
-				"title": "Unreal Log Viewer: Show Logs as Text for Copilot"
-			},
-			{
-				"command": "unrealLogViewer.getDisplayedLogMessagesForTest",
-				"title": "Unreal Log Viewer: Get Displayed Log Messages (For Testing)"
-			},
-			{
-				"command": "unrealLogViewer.setFiltersForTest",
-				"title": "Unreal Log Viewer: Set Filters (For Testing)"
-			},
-			{
-				"command": "unrealLogViewer.togglePauseForTest",
-				"title": "Unreal Log Viewer: Toggle Pause State (For Testing)"
-			},
-			{
-				"command": "unrealLogViewer.getPauseStateForTest",
-				"title": "Unreal Log Viewer: Get Pause State (For Testing)"
 			}
 		],
 		"configuration": {
@@ -142,8 +122,10 @@
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
 		"lint": "eslint",
+		"test:unit": "mocha out/test/logFilter.test.js",
 		"test:ui": "ts-node test/ui/runVSCodeTests.ts",
-		"test:ui:full": "npm run compile && npm run test:ui"
+		"test:ui:full": "npm run compile && npm run test:ui",
+		"test": "npm run compile && npm run test:unit && npm run test:ui"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.13.0",
@@ -155,6 +137,7 @@
 		"@vscode/test-electron": "^2.5.2",
 		"eslint": "^9.13.0",
 		"mocha": "^11.4.0",
+		"mochawesome": "^7.1.3",
 		"playwright": "^1.52.0",
 		"ts-node": "^10.9.2",
 		"typescript": "^5.8.2",
