@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unreal Log Viewer</title>
+    <script type="module" src="https://unpkg.com/@vscode/webview-ui-toolkit@latest/dist/toolkit.js"></script>
     <style>
         body {
             font-family: var(--vscode-font-family);
@@ -16,41 +17,35 @@
             height: 100vh; /* Use full viewport height */
         }
         #filter-controls {
-            padding: 8px;
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            background-color: var(--vscode-sideBar-background, #252526);
+            padding: 10px 10px; /* Modified: 0 padding top/bottom, 12px padding left/right */
+            display: flex; /* Default to flex, will be toggled to none */
+            gap: 8px; /* Spacing between control elements */
+            align-items: center; /* Vertically align items in the center */
+            background-color: var(--vscode-sideBar-background, #252526); /* Consistent background */
+            flex-wrap: nowrap; /* Ensure controls stay on one line */
+            overflow-x: auto; /* Allow horizontal scrolling if too many items */
+
+            position: absolute; /* Make it float */
+            top: 0px;
+            left: 0%;
+            right: 0px;
+            z-index: 10; /* Ensure it's on top */
+            border: 2px solid var(--vscode-editorWidget-border, var(--vscode-contrastBorder, #555)); /* Frame */
+            border-radius: 8px; /* Softer corners */
         }
-        #filter-controls label {
-            font-size: var(--vscode-font-size);
+        #filter-controls.hidden {
+            display: none;
         }
-        #filter-controls input[type="text"] {
-            font-family: var(--vscode-font-family);
-            color: var(--vscode-input-foreground);
-            background-color: var(--vscode-input-background);
-            border: 1px solid var(--vscode-input-border);
-            padding: 4px;
-            font-size: var(--vscode-font-size);
-            flex-grow: 1;
-            min-width: 80px;
+        vscode-text-field {
+            flex-grow: 1; /* Allow text fields to take available space */
+            min-width: 100px; /* Minimum width for text fields */
         }
-        #filter-controls button {
-            font-family: var(--vscode-font-family);
-            color: var(--vscode-button-foreground);
-            background-color: var(--vscode-button-background);
-            border: 1px solid var(--vscode-button-border);
-            padding: 4px 8px;
-            cursor: pointer;
-            font-size: var(--vscode-font-size);
-        }
-        #filter-controls button:hover {
-            background-color: var(--vscode-button-hoverBackground);
+        vscode-button {
+            white-space: nowrap; /* Prevent button text from wrapping */
         }
         #log-table-container {
             flex-grow: 1; /* Takes remaining space */
             overflow-y: auto; /* Enables scrolling for the table container */
-            padding-top: 5px; /* Increased from 2px to ensure topmost row isn't visually cut */
         }
         table {
             width: 100%;
@@ -122,53 +117,22 @@
             color: var(--vscode-editor-foreground);
         }
 
-        .filter-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            align-items: center; /* Align items vertically */
-        }
-
-        .filter-controls input[type="text"] {
-            flex-grow: 1;
-            padding: 5px;
-            border: 1px solid var(--vscode-input-border);
-            background-color: var(--vscode-input-background);
-            color: var(--vscode-input-foreground);
-        }
-
-        .filter-controls button {
-            padding: 5px 10px;
-            border: 1px solid var(--vscode-button-border, transparent);
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            cursor: pointer;
-        }
-
-        .filter-controls button:hover {
-            background-color: var(--vscode-button-hoverBackground);
-        }
-
-        .log-counter { /* New: Style for the counter */
+        .log-counter { /* Style for the counter */
             white-space: nowrap; /* Prevent wrapping */
             margin: 0 5px; /* Add some spacing */
-            min-width: 10%; /* Changed from 20% to 10% */
-            text-align: right; /* Changed from center to right */
+            text-align: right; 
+            color: var(--vscode-editor-foreground); /* Ensure visibility */
+            font-size: var(--vscode-font-size);
+            padding: 4px 0; /* Align vertically with buttons/inputs */
         }
     </style>
 </head>
 <body>
     <div id="filter-controls">
-        <label for="levelFilterInput">Level:</label>
-        <input type="text" id="levelFilterInput" name="levelFilterInput" title="Filter by log level. Examples:&#10;- 'Error,Warning' (shows Error or Warning)&#10;- '!Verbose' (hides Verbose)&#10;- '>Warning' (shows Warning, Error, Fatal)&#10;- 'Error,!LogTemp' (shows Error, hides LogTemp category if used with category filter)">
-        <label for="categoryFilterInput">Category:</label>
-        <input type="text" id="categoryFilterInput" name="categoryFilterInput" title="Filter by log category. Examples:&#10;- 'LogAI,LogNet' (shows LogAI or LogNet)&#10;- '!LogTemp' (hides LogTemp)&#10;- 'AI' (shows categories containing 'AI')&#10;- 'MyCat,!Internal' (shows MyCat, hides Internal)">
-        <label for="messageFilterInput">Message:</label>
-        <input type="text" id="messageFilterInput" name="messageFilterInput" title="Filter by log message content. Examples:&#10;- 'Player,Spawn' (message contains Player or Spawn)&#10;- '!Debug' (message does not contain Debug)&#10;- 'Error 123' (message contains 'Error 123')">
-        <span id="logCounter" class="log-counter">0 / 0</span> <!-- New: Counter element -->
-        <button id="clearFilterButton">Clear</button>
-        <button id="copilotViewButton" title="Show current logs as a text document for GitHub Copilot">Copilot View</button> <!-- Added Copilot View Button -->
-        <button id="pauseButton" title="Pause log updates in the view">Pause</button> <!-- Added Pause Button -->
+        <vscode-text-field id="levelFilterInput" placeholder="Filter Level" title="Filter by log level. Examples:&#10;- 'Error,Warning' (shows Error or Warning)&#10;- '!Verbose' (hides Verbose)&#10;- '>Warning' (shows Warning, Error, Fatal)&#10;- 'Error,!LogTemp' (shows Error, hides LogTemp category if used with category filter)"></vscode-text-field>
+        <vscode-text-field id="categoryFilterInput" placeholder="Filter Category" title="Filter by log category. Examples:&#10;- 'LogAI,LogNet' (shows LogAI or LogNet)&#10;- '!LogTemp' (hides LogTemp)&#10;- 'AI' (shows categories containing 'AI')&#10;- 'MyCat,!Internal' (shows MyCat, hides Internal)"></vscode-text-field>
+        <vscode-text-field id="messageFilterInput" placeholder="Filter Message" title="Filter by log message content. Examples:&#10;- 'Player,Spawn' (message contains Player or Spawn)&#10;- '!Debug' (message does not contain Debug)&#10;- 'Error 123' (message contains 'Error 123')"></vscode-text-field>
+        <span id="logCounter" class="log-counter">0 / 0</span>
     </div>
 
     <div id="log-table-container">
@@ -187,13 +151,11 @@
         const vscode = acquireVsCodeApi();
         const levelInput = document.getElementById('levelFilterInput');
         const categoryInput = document.getElementById('categoryFilterInput');
-        const messageInput = document.getElementById('messageFilterInput'); // New
-        const logCounter = document.getElementById('logCounter'); // New: Get counter element
-        const clearButton = document.getElementById('clearFilterButton');
-        const copilotViewButton = document.getElementById('copilotViewButton'); // Added: Get Copilot View button
-        const pauseButton = document.getElementById('pauseButton'); // Added: Get Pause button
+        const messageInput = document.getElementById('messageFilterInput');
+        const logCounter = document.getElementById('logCounter');
         const logEntriesTableBody = document.getElementById('log-entries');
         const logTableContainer = document.getElementById('log-table-container');
+        const filterControls = document.getElementById('filter-controls');
 
         let showSrcColumn = false;
 
@@ -201,7 +163,7 @@
             document.documentElement.style.setProperty('--log-table-font-size', fontSize);
         }
 
-        function applyFontFamily(fontFamily) { // New function
+        function applyFontFamily(fontFamily) {
             document.documentElement.style.setProperty('--log-table-font-family', fontFamily);
         }
 
@@ -251,16 +213,16 @@
         }
 
         function createLogRowHtml(log) {
-            const sanitizedLevel = sanitize(log.level.toUpperCase()); // Ensure consistent casing for class names
-            const levelClass = 'level-' + sanitizedLevel; // e.g. level-FATAL, level-WARNING
+            const sanitizedLevel = sanitize(log.level.toUpperCase());
+            const levelClass = 'level-' + sanitizedLevel;
 
             const dateHtml = sanitize(log.date);
-            const levelHtml = sanitize(log.level); // Display original casing for the text content
+            const levelHtml = sanitize(log.level);
             const categoryHtml = sanitize(log.category);
             const messageHtml = sanitize(log.message);
             let srcVal = (log.source || log.src || '');
             if (typeof srcVal === 'string') {
-                srcVal = srcVal.substring(0, 3); // Truncate to max 3 chars
+                srcVal = srcVal.substring(0, 3);
             }
             const srcHtml = sanitize(srcVal);
 
@@ -297,7 +259,6 @@
             logTableContainer.scrollTop = logTableContainer.scrollHeight;
         }
         
-        // Store all logs for dynamic column logic
         let allLogs = [];
 
         window.addEventListener('message', event => {
@@ -343,26 +304,29 @@
                 case 'updateFilterInputs':
                     levelInput.value = message.levelFilter;
                     categoryInput.value = message.categoryFilter;
-                    messageInput.value = message.messageFilter; // New
+                    messageInput.value = message.messageFilter;
                     break;
-                case 'updateCounts': // New: Handle count updates
+                case 'updateCounts':
                     logCounter.textContent = `${message.shown} / ${message.total}`;
                     break;
-                case 'updateFontSize': // New: Handle font size updates
+                case 'updateFontSize':
                     applyFontSize(message.fontSize);
                     break;
-                case 'updateColorMode': // New: Handle color mode updates
+                case 'updateColorMode':
                     applyColorMode(message.useColors);
                     break;
-                case 'updateGridLinesVisibility': // New: Handle grid lines visibility updates
+                case 'updateGridLinesVisibility':
                     applyGridLinesVisibility(message.showGridLines);
                     break;
-                case 'updateFontFamily': // New: Handle font family updates
+                case 'updateFontFamily':
                     applyFontFamily(message.fontFamily);
                     break;
-                case 'updatePauseButton': // Added: Handle pause button text update
-                    pauseButton.textContent = message.isPaused ? 'Resume' : 'Pause';
-                    pauseButton.title = message.isPaused ? 'Resume log updates' : 'Pause log updates';
+                case 'toggleFilterBar': {
+                    filterControls.classList.toggle('hidden');
+                    // Removed dynamic padding adjustment for logTableContainer
+                    break;
+                }
+                case 'updateLogCounts':
                     break;
             }
         });
@@ -372,7 +336,7 @@
                 command: 'applyFilters',
                 levelFilter: levelInput.value,
                 categoryFilter: categoryInput.value,
-                messageFilter: messageInput.value // New
+                messageFilter: messageInput.value
             });
         });
 
@@ -381,29 +345,17 @@
                 command: 'applyFilters',
                 levelFilter: levelInput.value,
                 categoryFilter: categoryInput.value,
-                messageFilter: messageInput.value // New
+                messageFilter: messageInput.value
             });
         });
 
-        messageInput.addEventListener('input', () => { // New
-            vscode.postMessage({ // New
-                command: 'applyFilters', // New
-                levelFilter: levelInput.value, // New
-                categoryFilter: categoryInput.value, // New
-                messageFilter: messageInput.value // New
-            }); // New
-        }); // New
-
-        clearButton.addEventListener('click', () => {
-            vscode.postMessage({ command: 'webviewClearButtonPressed' });
-        });
-
-        copilotViewButton.addEventListener('click', () => { // Added: Event listener for Copilot View button
-            vscode.postMessage({ command: 'copilotViewRequested' });
-        });
-
-        pauseButton.addEventListener('click', () => { // Added: Event listener for Pause button
-            vscode.postMessage({ command: 'togglePause' });
+        messageInput.addEventListener('input', () => {
+            vscode.postMessage({
+                command: 'applyFilters',
+                levelFilter: levelInput.value,
+                categoryFilter: categoryInput.value,
+                messageFilter: messageInput.value
+            });
         });
 
         vscode.postMessage({ command: 'getInitialLogs' });

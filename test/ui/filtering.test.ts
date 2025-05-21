@@ -39,7 +39,7 @@ describe('UI Filtering Tests', () => {
     beforeEach(async () => {
         await focusUnrealLogView();
         await clearLogs();
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { level: '', category: '', message: '' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: '', categoryFilter: '', messageFilter: '' });
         const isPaused: boolean | undefined = await vscode.commands.executeCommand('unrealLogViewer.getPauseStateForTest');
         if (isPaused) {
             await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest');
@@ -54,7 +54,7 @@ describe('UI Filtering Tests', () => {
             await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest');
         }
         await clearLogs();
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { level: '', category: '', message: '' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: '', categoryFilter: '', messageFilter: '' });
         await delay(COMMAND_EXECUTION_DELAY_MS);
     });
 
@@ -68,7 +68,7 @@ describe('UI Filtering Tests', () => {
         await sendTcpLogMessage(TEST_PORT, JSON.stringify(logInfo));
         await delay(LOG_PROCESSING_DELAY_MS);
 
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { level: 'Error' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: 'Error' });
         await delay(COMMAND_EXECUTION_DELAY_MS);
 
         let displayedLogs = await getDisplayedLogMessages();
@@ -76,7 +76,7 @@ describe('UI Filtering Tests', () => {
         assert.strictEqual(displayedLogs[0].message, logError.message, 'Test 0004: Displayed log message mismatch');
         assert.strictEqual(displayedLogs[0].level, 'Error', 'Test 0004: Displayed log level mismatch');
 
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { level: '' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: '' });
         await delay(COMMAND_EXECUTION_DELAY_MS);
         displayedLogs = await getDisplayedLogMessages();
         assert.strictEqual(displayedLogs.length, 3, 'Test 0004: Should display all 3 logs after clearing level filter');
@@ -90,7 +90,7 @@ describe('UI Filtering Tests', () => {
         await sendTcpLogMessage(TEST_PORT, JSON.stringify(logCatB));
         await delay(LOG_PROCESSING_DELAY_MS);
 
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { category: 'CategoryA.0005' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { categoryFilter: 'CategoryA.0005' });
         await delay(COMMAND_EXECUTION_DELAY_MS);
 
         const displayedLogs = await getDisplayedLogMessages();
@@ -106,7 +106,7 @@ describe('UI Filtering Tests', () => {
         await sendTcpLogMessage(TEST_PORT, JSON.stringify(logMsg2));
         await delay(LOG_PROCESSING_DELAY_MS);
 
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { message: 'unique message content' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { messageFilter: 'unique message content' });
         await delay(COMMAND_EXECUTION_DELAY_MS);
 
         const displayedLogs = await getDisplayedLogMessages();
@@ -124,7 +124,7 @@ describe('UI Filtering Tests', () => {
         await sendTcpLogMessage(TEST_PORT, JSON.stringify(logErrorCatB));
         await delay(LOG_PROCESSING_DELAY_MS);
 
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { level: 'Error', category: 'FilterCatA.0007' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: 'Error', categoryFilter: 'FilterCatA.0007' });
         await delay(COMMAND_EXECUTION_DELAY_MS);
 
         const displayedLogs = await getDisplayedLogMessages();
@@ -140,12 +140,12 @@ describe('UI Filtering Tests', () => {
         await sendTcpLogMessage(TEST_PORT, JSON.stringify(log2));
         await delay(LOG_PROCESSING_DELAY_MS);
 
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { level: 'Error' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: 'Error' });
         await delay(COMMAND_EXECUTION_DELAY_MS);
         let displayedLogs = await getDisplayedLogMessages();
         assert.strictEqual(displayedLogs.length, 1, 'Test 0008: Should show 1 log after initial filter');
 
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { level: '', category: '', message: '' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: '', categoryFilter: '', messageFilter: '' });
         await delay(COMMAND_EXECUTION_DELAY_MS);
         displayedLogs = await getDisplayedLogMessages();
         assert.strictEqual(displayedLogs.length, 2, 'Test 0008: Should show all 2 logs after clearing filters');

@@ -25,9 +25,14 @@
 		"onCommand:unrealLogViewer.getDisplayedLogMessagesForTest",
 		"onCommand:unrealLogViewer.setFiltersForTest",
 		"onCommand:unrealLogViewer.togglePauseForTest",
-		"onCommand:unrealLogViewer.getPauseStateForTest"
+		"onCommand:unrealLogViewer.getPauseStateForTest",
+		"onCommand:unrealLogViewer.titleBarClear",
+		"onCommand:unrealLogViewer.titleBarCopilotView",
+		"onCommand:unrealLogViewer.titleBarPauseLogs",
+		"onCommand:unrealLogViewer.titleBarResumeLogs",
+		"onCommand:unrealLogViewer.toggleFilterBarVisibility"
 	],
-	"main": "./out/src/unrealLogViewer.js",
+	"main": "./out/src/extension.js",
 	"contributes": {
 		"commands": [
 			{
@@ -41,6 +46,36 @@
 			{
 				"command": "unrealLogViewer.applyServerPortChange",
 				"title": "Unreal Log Viewer: Apply Server Port Change"
+			},
+			{
+				"command": "unrealLogViewer.titleBarClear",
+				"title": "Clear Logs",
+				"category": "Unreal Log Viewer",
+				"icon": "$(clear-all)"
+			},
+			{
+				"command": "unrealLogViewer.titleBarCopilotView",
+				"title": "Show Logs for Copilot",
+				"category": "Unreal Log Viewer",
+				"icon": "$(open-preview)"
+			},
+			{
+				"command": "unrealLogViewer.titleBarPauseLogs",
+				"title": "Pause Log Tailing",
+				"category": "Unreal Log Viewer",
+				"icon": "$(debug-pause)"
+			},
+			{
+				"command": "unrealLogViewer.titleBarResumeLogs",
+				"title": "Resume Log Tailing",
+				"category": "Unreal Log Viewer",
+				"icon": "$(play)"
+			},
+			{
+				"command": "unrealLogViewer.toggleFilterBarVisibility",
+				"title": "Toggle Filter Bar",
+				"category": "Unreal Log Viewer",
+				"icon": "$(filter)"
 			}
 		],
 		"configuration": {
@@ -113,6 +148,37 @@
 					"name": "Unreal Log Viewer",
 					"type": "webview",
 					"icon": "resources/unreal-log-viewer.svg"
+				}
+			]
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "unrealLogViewer.titleBarClear",
+					"when": "view == unrealLogViewerView3",
+					"group": "navigation@1"
+				},
+				{
+					"command": "unrealLogViewer.titleBarCopilotView",
+					"when": "view == unrealLogViewerView3",
+					"group": "navigation@2"
+				},
+				{
+					"command": "unrealLogViewer.titleBarPauseLogs",
+					"when": "view == unrealLogViewerView3 && !unrealLogViewerIsPaused",
+					"group": "navigation@3",
+					"icon": "$(debug-pause)"
+				},
+				{
+					"command": "unrealLogViewer.titleBarResumeLogs",
+					"when": "view == unrealLogViewerView3 && unrealLogViewerIsPaused",
+					"group": "navigation@3",
+					"icon": "$(play)"
+				},
+				{
+					"command": "unrealLogViewer.toggleFilterBarVisibility",
+					"when": "view == unrealLogViewerView3",
+					"group": "navigation@4"
 				}
 			]
 		}

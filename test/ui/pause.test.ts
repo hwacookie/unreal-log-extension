@@ -41,7 +41,7 @@ describe('Pause Functionality Tests', () => {
         await focusUnrealLogView();
         await clearLogs();
         // Ensure filters are cleared for pause tests, as they might interact
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { level: '', category: '', message: '' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: '', categoryFilter: '', messageFilter: '' });
         const isPaused: boolean | undefined = await vscode.commands.executeCommand('unrealLogViewer.getPauseStateForTest');
         if (isPaused) {
             await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest'); // Ensure starts unpaused
@@ -57,7 +57,7 @@ describe('Pause Functionality Tests', () => {
         }
         await clearLogs();
         // Clear filters after pause tests
-        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { level: '', category: '', message: '' });
+        await vscode.commands.executeCommand('unrealLogViewer.setFiltersForTest', { levelFilter: '', categoryFilter: '', messageFilter: '' });
         await delay(COMMAND_EXECUTION_DELAY_MS);
     });
 
