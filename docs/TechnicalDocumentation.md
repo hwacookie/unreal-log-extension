@@ -149,8 +149,7 @@ The extension is primarily built around a few key components:
         * `test`: A top-level script to compile and run both unit and UI tests.
     * **VS Code Test Explorer Setup:**
         * The "Mocha Test Explorer" extension (`hbenl.vscode-mocha-test-adapter`) is recommended.
-        * Configuration in `.vscode/settings.json` is set to discover and run only plain unit tests (`out/test/logFilter.test.js`) to avoid conflicts with UI tests that require a different runner and the `vscode` module mock.
-        * A `test/ui/vscode-mock.js` file was created to help with UI test discovery if the glob pattern were to include them, but it's currently not used by the Test Explorer configuration to ensure plain unit tests run reliably.
+        * Configuration in `.vscode/settings.json` is set to discover and run only plain unit tests (`out/test/logFilter.test.js`) to avoid conflicts with UI tests that require a different runner.
 
 ## 7. Next Steps / Outstanding Issues
 

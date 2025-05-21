@@ -2,9 +2,28 @@ import * as vscode from 'vscode';
 import * as net from 'net';
 import { UnrealLogEntry } from './logTypes';
 
+/**
+ * Callback function type for adding a parsed log entry.
+ * @param log The `UnrealLogEntry` object to be added.
+ */
 export type AddLogFunction = (log: UnrealLogEntry) => void;
+
+/**
+ * Callback function type for refreshing the text-based log view.
+ */
 export type RefreshTextLogFunction = () => void;
 
+/**
+ * Manages the TCP server that listens for incoming Unreal Engine log messages.
+ *
+ * This class handles:
+ * - Starting, stopping, and restarting the TCP server on a specified port.
+ * - Managing active client connections.
+ * - Receiving data from connected clients, buffering it, and parsing it for JSON log entries.
+ * - Invoking a callback (`addLogCallback`) for each successfully parsed log entry.
+ * - Invoking a callback (`refreshTextLogCallback`) to signal that the text-based log view should update.
+ * - Logging server activity and errors to a VS Code output channel.
+ */
 export class LogServerManager {
     private server: net.Server | undefined;
     private activeConnections = new Set<net.Socket>();
@@ -14,6 +33,12 @@ export class LogServerManager {
     private refreshTextLogCallback: RefreshTextLogFunction;
     private currentPort: number | undefined;
 
+    /**
+     * Creates an instance of LogServerManager.
+     * @param outputChannel A VS Code output channel for logging server activity.
+     * @param addLogCallback A function to call when a new log entry is parsed from the TCP stream.
+     * @param refreshTextLogCallback A function to call to refresh any text-based log views.
+     */
     constructor(
         outputChannel: vscode.OutputChannel,
         addLogCallback: AddLogFunction,
@@ -24,10 +49,20 @@ export class LogServerManager {
         this.refreshTextLogCallback = refreshTextLogCallback;
     }
 
+    /**
+     * Gets the port number the server is currently configured to listen on.
+     * @returns The current port number, or undefined if the server is not started or port is not set.
+     */
     public getCurrentPort(): number | undefined {
         return this.currentPort;
     }
 
+    /**
+     * Starts the TCP log server on the specified port.
+     * If the server is already running on the same port, it does nothing.
+     * If the server is running on a different port, it stops the existing server first.
+     * @param port The port number to listen on.
+     */
     public start(port: number): void {
         if (this.isServerRestarting) {
             vscode.window.showWarningMessage('Server start/restart is already in progress. Please wait.');
@@ -53,6 +88,10 @@ export class LogServerManager {
         }
     }
 
+    /**
+     * Internal method to create and start a new TCP server instance.
+     * @param port The port number for the new server instance.
+     */
     private startNewServerInstance(port: number): void {
         const newServerInstance = net.createServer(socket => {
             this.outputChannel.appendLine(`Client connected: ${socket.remoteAddress}:${socket.remotePort}`);
@@ -140,6 +179,10 @@ export class LogServerManager {
         });
     }
 
+    /**
+     * Stops the TCP log server.
+     * @param callback An optional callback function to execute after the server has stopped.
+     */
     public stop(callback?: () => void): void {
         this.outputChannel.appendLine('Stop command received for LogServerManager.');
         this.isServerRestarting = true; // Prevent other operations during stop
@@ -151,6 +194,10 @@ export class LogServerManager {
         });
     }
 
+    /**
+     * Internal method to stop the currently running server instance and close active connections.
+     * @param callback A function to call after the server is fully stopped.
+     */
     private stopInternal(callback: () => void): void {
         if (this.server) {
             const portToClose = this.currentPort;
@@ -186,6 +233,11 @@ export class LogServerManager {
         }
     }
 
+    /**
+     * Restarts the TCP log server, potentially on a new port.
+     * This is effectively a stop followed by a start operation.
+     * @param newPort The port number for the server to listen on after restarting.
+     */
     public restart(newPort: number): void {
         this.outputChannel.appendLine(`Restart command received. Attempting to switch to port ${newPort}.`);
         this.start(newPort); // start method already handles stopping the old server if necessary

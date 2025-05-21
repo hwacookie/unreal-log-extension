@@ -1,3 +1,9 @@
+/**
+ * @file logReceiving.test.ts
+ * Contains UI tests for log reception and timestamp formatting in the Unreal Log Viewer extension.
+ * It verifies that logs sent via TCP are correctly received and displayed, and that timestamps
+ * are formatted according to the extension's settings (absolute vs. relative).
+ */
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { 
@@ -20,7 +26,13 @@ before(async () => {
   await focusUnrealLogView();
 });
 
+/**
+ * Test suite for basic log reception functionality.
+ */
 describe('Unreal Log Viewer - Basic Log Reception', function () {
+  /**
+   * Test case to verify that a simple log message sent via TCP is received and displayed.
+   */
   it('test 0001: should receive and display a simple log message via TCP', async function () {
     this.timeout(15000);
     const testLog: TestLogEntry = {
@@ -40,7 +52,10 @@ describe('Unreal Log Viewer - Basic Log Reception', function () {
   });
 });
 
-// Define an interface for the structure returned by config.inspect()
+/**
+ * Interface for the structure returned by `vscode.workspace.getConfiguration().inspect()`.
+ * This helps in strongly typing the inspection results for configuration values.
+ */
 interface ConfigurationInspect<T> {
   key: string;
   defaultValue?: T;
@@ -54,13 +69,22 @@ interface ConfigurationInspect<T> {
   languageIds?: string[];
 }
 
-// Store original inspection results to aid in restoration
+/** Stores the original inspection result for the 'useRelativeTimestamps' setting. */
 let originalUseRelativeInspection: ConfigurationInspect<boolean> | undefined;
+/** Stores the original inspection result for the 'timestampFormat' setting. */
 let originalTimestampFormatInspection: ConfigurationInspect<string> | undefined;
-// Store original effective values as a fallback or for simpler restoration logic
+/** Stores the original effective value for 'useRelativeTimestamps' before tests modify it. */
 let originalRelativeSettingForTimestampTests: boolean | undefined;
+/** Stores the original effective value for 'timestampFormat' before tests modify it. */
 let originalTimestampFormatForTimestampTests: string | undefined;
 
+/**
+ * Test suite for timestamp formatting functionality.
+ * This suite includes tests for both absolute and relative timestamp display,
+ * ensuring that the formatting respects the extension's configuration settings.
+ * It uses `before` and `after` hooks to save and restore original timestamp settings,
+ * and `beforeEach` to prepare for each test.
+ */
 describe('Unreal Log Viewer - Timestamp Formatting Tests', function () {
   const baseLogEntry: Omit<TestLogEntry, 'date'> = {
     category: 'TimestampTest',
@@ -113,6 +137,10 @@ describe('Unreal Log Viewer - Timestamp Formatting Tests', function () {
     await delay(getSetupCompletionDelayMs()); // Updated
   });
   
+  /**
+   * Test case to verify that absolute timestamps are displayed correctly in HH:mm:ss.SSS format.
+   * It sets the relevant configuration, sends a log, and checks if the displayed timestamp matches the expected format.
+   */
   it('test 0002: should display absolute timestamp correctly (HH:mm:ss.SSS)', async function () {
     this.timeout(20000);
     let config = vscode.workspace.getConfiguration('unrealLogViewer'); // Initial fetch
@@ -173,6 +201,10 @@ describe('Unreal Log Viewer - Timestamp Formatting Tests', function () {
       `Input ISO: ${currentIsoTimestamp}. Effective '${settingKey}' was: ${currentEffectiveValue}. Timestamp sent to provider: ${timestampWithoutZ}`);
   });
 
+  /**
+   * Test case to verify that relative timestamps are displayed correctly in +HH:MM:SS.mmm format.
+   * It sets the relevant configuration, sends a log, and checks if the displayed timestamp matches the expected relative format.
+   */
   it('test 0003: should display relative timestamp correctly (+HH:MM:SS.mmm)', async function () {
     this.timeout(15000);
     let config = vscode.workspace.getConfiguration('unrealLogViewer'); // Initial fetch

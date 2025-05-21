@@ -2,6 +2,26 @@ import * as path from 'path';
 import * as Mocha from 'mocha';
 import * as fs from 'fs';
 
+/**
+ * @fileoverview Test suite runner for UI tests of the Unreal Log Viewer extension.
+ * This script configures and runs Mocha tests, generating mochawesome reports.
+ * It discovers `.test.js` files in the `test/ui` directory and executes them.
+ */
+
+/**
+ * Runs the Mocha test suite for UI tests.
+ *
+ * This function configures Mocha with the `mochawesome` reporter, sets up report directories,
+ * discovers all `*.test.js` files in the `../` directory (relative to this file, i.e., `test/ui/`),
+ * and executes the tests.
+ *
+ * It reads reporter configuration from environment variables (`MOCHAWESOME_REPORTDIR`, `MOCHAWESOME_REPORTFILENAME`)
+ * or uses default values if environment variables are not set.
+ *
+ * @returns A promise that resolves when the test run is complete. It resolves even if there are test failures
+ * to allow the reporter to generate its output. It rejects if there's an error setting up or starting the tests
+ * (e.g., cannot read test directory, no test files found).
+ */
 export function run(): Promise<void> {
   // console.log('[suite/index.ts] MOCHA_REPORTER env var:', process.env.MOCHA_REPORTER);
   // console.log('[suite/index.ts] MOCHAWESOME_REPORTDIR env var:', process.env.MOCHAWESOME_REPORTDIR);

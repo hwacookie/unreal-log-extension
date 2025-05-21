@@ -1,7 +1,23 @@
+/**
+ * @file runVSCodeTests.ts
+ * This script is responsible for running the VS Code extension UI tests.
+ * It uses the `@vscode/test-electron` library to launch a new instance of VS Code
+ * with the extension loaded and execute the test suite.
+ *
+ * It configures Mochawesome for test reporting, ensuring that reports are generated
+ * in the `test-results/mochawesome` directory.
+ */
 import * as path from 'path';
 import { runTests } from '@vscode/test-electron';
 import * as fs from 'fs';
 
+/**
+ * Main function to set up and run the VS Code extension tests.
+ * It defines paths for the extension, tests, and workspace.
+ * It also ensures the Mochawesome report directory exists and sets up
+ * environment variables for Mochawesome to generate HTML and JSON reports.
+ * Finally, it invokes `runTests` from `@vscode/test-electron`.
+ */
 async function main() {
   try {
     const extensionDevelopmentPath = path.resolve(__dirname, '../../'); // Path to the extension root

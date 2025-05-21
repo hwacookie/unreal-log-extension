@@ -1,3 +1,13 @@
+/**
+ * @module extension
+ * This module is the main entry point for the Unreal Log Viewer VS Code extension.
+ * It handles the activation and deactivation of the extension, including:
+ * - Registering the Unreal Log Viewer webview provider.
+ * - Setting up the log server to receive logs from Unreal Engine.
+ * - Registering commands for interacting with the log viewer (e.g., clearing logs, opening as text).
+ * - Managing the lifecycle of resources like output channels and status bar items.
+ * - Handling configuration changes.
+ */
 import * as vscode from 'vscode';
 import { UnrealLogEntry } from './logTypes';
 import { UnrealLogViewerProvider } from './UnrealLogViewerProvider';
@@ -8,8 +18,17 @@ let outputChannel: vscode.OutputChannel | undefined;
 let unrealLogViewerProviderInstance: UnrealLogViewerProvider | undefined;
 let logTextContentProviderInstance: UnrealLogTextDocumentContentProvider | undefined;
 let logServerManager: LogServerManager | undefined;
+/**
+ * Status bar item to display the count of displayed and total logs.
+ */
 let logCountStatusItem: vscode.StatusBarItem; // Added for log counts
 
+/**
+ * Activates the Unreal Log Viewer extension.
+ * This function is called when the extension is activated, i.e., when its activation events are triggered.
+ * It sets up the log viewer provider, log server, commands, and other necessary components.
+ * @param context The extension context provided by VS Code.
+ */
 export function activate(context: vscode.ExtensionContext) {
 	console.log('UNREAL LOG VIEWER: activate called');
 
@@ -271,6 +290,11 @@ export function activate(context: vscode.ExtensionContext) {
 	}));
 }
 
+/**
+ * Deactivates the Unreal Log Viewer extension.
+ * This function is called when the extension is deactivated.
+ * It cleans up resources, such as stopping the log server and disposing of the output channel.
+ */
 export function deactivate() {
 	console.log('UNREAL LOG VIEWER: deactivate called');
 	outputChannel?.appendLine('Unreal Log Viewer extension deactivating...');

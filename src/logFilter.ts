@@ -1,12 +1,37 @@
+/**
+ * @module logFilter
+ * This module provides functionality for filtering Unreal Engine log entries based on various criteria.
+ * It includes an interface for filter options and a function to check if a log entry passes the filters.
+ */
 import { UnrealLogEntry } from './logTypes';
 
+/**
+ * Defines the options for filtering log entries.
+ */
 export interface LogFilterOptions {
+    /** The log level to filter by (e.g., "Error", "Warning,Error", ">Log", "!Verbose"). */
     levelFilter: string;
+    /** The category string to filter by (e.g., "MyCategory", "!OtherCategory"). Supports comma-separated values and exclusion with '!'. */
     categoryFilter: string;
+    /** The message content to filter by. Supports comma-separated values and exclusion with '!'. */
     messageFilter: string;
+    /** Optional array defining the hierarchical order of log levels. Defaults to a standard Unreal Engine order. */
     logLevelOrder?: string[];
 }
 
+/**
+ * Checks if a given log entry passes the specified filter criteria.
+ *
+ * This function evaluates the log entry against level, category, and message filters.
+ * - Level filtering supports exact matches, comma-separated lists, minimum levels (e.g., ">Warning"),
+ *   and exclusions (e.g., "!Verbose").
+ * - Category and Message filtering support case-insensitive substring matches, comma-separated lists
+ *   for OR conditions, and exclusion prefixes ('!') for AND NOT conditions.
+ *
+ * @param log The `UnrealLogEntry` to check.
+ * @param options The `LogFilterOptions` containing the filter criteria.
+ * @returns `true` if the log entry passes all active filters, `false` otherwise.
+ */
 export function passesLogFilters(
     log: UnrealLogEntry,
     options: LogFilterOptions

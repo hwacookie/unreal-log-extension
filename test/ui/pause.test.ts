@@ -1,3 +1,8 @@
+/**
+ * @fileoverview UI tests for the pause functionality of the Unreal Log Viewer.
+ * These tests verify that pausing and resuming log display works as expected.
+ */
+
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import {
@@ -13,6 +18,9 @@ import {
     TEST_PORT
 } from './testUtils';
 
+/**
+ * Test suite for the pause functionality of the Unreal Log Viewer.
+ */
 describe('Pause Functionality Tests', () => {
     let originalUseRelativeTimestamps: boolean | undefined;
     let originalTimestampFormat: string | undefined;
@@ -57,6 +65,10 @@ describe('Pause Functionality Tests', () => {
         await delay(getCommandExecutionDelayMs()); // Updated
     });
 
+    /**
+     * Test case 0009: Verifies that new logs are not displayed when the log view is paused.
+     * It sends an initial log, pauses the view, sends another log, and checks that only the initial log is visible.
+     */
     it('test 0009: should not display new logs when paused', async () => {
         const initialLog = { date: new Date().toISOString(), level: 'Log', category: 'PauseTest.0009', message: 'Initial log before pause 0009' };
         await sendTcpLogMessage(TEST_PORT, JSON.stringify(initialLog));
@@ -79,6 +91,10 @@ describe('Pause Functionality Tests', () => {
         assert.strictEqual(displayedLogs[0].message, initialLog.message, 'Test 0009: The initially displayed log should still be the one visible');
     });
 
+    /**
+     * Test case 0010: Verifies that logs queued while paused are displayed when the log view is resumed.
+     * It pauses the view, sends multiple logs, resumes the view, and checks that all queued logs are visible.
+     */
     it('test 0010: should display queued logs when resumed', async () => {
         await vscode.commands.executeCommand('unrealLogViewer.togglePauseForTest');
         await delay(getCommandExecutionDelayMs()); // Updated
@@ -104,6 +120,10 @@ describe('Pause Functionality Tests', () => {
         assert.ok(displayedLogs.find(log => log.message === logWhilePaused2.message), 'Test 0010: Queued log 2 not found after resume');
     });
 
+    /**
+     * Test case 0011: Verifies that the pause state is correctly reported via a command.
+     * It toggles the pause state multiple times and checks if the reported state is accurate.
+     */
     it('test 0011: should correctly report pause state via command', async () => {
         const initialPauseState: boolean | undefined = await vscode.commands.executeCommand('unrealLogViewer.getPauseStateForTest');
         assert.strictEqual(initialPauseState, false, 'Test 0011: Initial pause state should be false');

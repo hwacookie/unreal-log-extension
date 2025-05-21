@@ -1,3 +1,8 @@
+/**
+ * @module UnrealLogViewerProvider
+ * This module defines the `UnrealLogViewerProvider` class, which is responsible for managing the state
+ * and behavior of the Unreal Log Viewer webview. It implements `vscode.WebviewViewProvider`.
+ */
 import * as vscode from 'vscode';
 import { UnrealLogEntry } from './logTypes';
 import { LogStore, PruneInfo } from './LogStore';
@@ -9,16 +14,33 @@ import { WebviewAppearanceManager } from './WebviewAppearanceManager';
 import { WebviewViewUpdater, WebviewLog } from './WebviewViewUpdater';
 import { WebviewElement } from '../test/ui/testUtils'; // Added import
 
+/**
+ * Provides the Unreal Log Viewer webview, managing its content, state, and interactions.
+ * This class handles log storage, filtering, pausing, date formatting, appearance updates,
+ * and communication with the webview content.
+ */
 export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
+    /**
+     * The unique type of this webview view.
+     */
     public static readonly viewType = 'unrealLogViewerView3';
+    /** Manages the storage of log entries. */
     private logStore: LogStore;
+    /** Manages log filtering logic and state. */
     private filterManager: FilterManager;
+    /** Manages the pause state of the log view. */
     private pauseManager: PauseManager;
+    /** Handles messages received from the webview. */
     private webviewMessageHandler: WebviewMessageHandler;
+    /** Formats dates and timestamps for display. */
     private dateFormatter: DateFormatter;
+    /** Manages the visual appearance of the webview (fonts, colors, etc.). */
     private webviewAppearanceManager: WebviewAppearanceManager;
+    /** Updates the webview's content (logs, counts, button states). */
     private webviewViewUpdater: WebviewViewUpdater;
+    /** Timestamp of the last time logs were cleared. */
     private lastClearTime: Date = new Date();
+    /** The underlying VS Code webview view instance. */
     private _webviewView: vscode.WebviewView | undefined;
 
     /**
@@ -31,8 +53,15 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
      */
     public onFiltersChanged?: () => void = () => { };
 
+    /**
+     * Event emitter for when the displayed or total log counts change.
+     */
     public readonly onLogCountsChanged = new vscode.EventEmitter<{ displayed: number; total: number }>();
 
+    /**
+     * Constructs an instance of `UnrealLogViewerProvider`.
+     * @param context The extension context provided by VS Code.
+     */
     constructor(private readonly context: vscode.ExtensionContext) {
         this.logStore = new LogStore();
         this.filterManager = new FilterManager(this.context); // Corrected: Pass context to FilterManager constructor
@@ -59,6 +88,10 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         this.webviewMessageHandler = new WebviewMessageHandler(this.filterManager, webviewActions);
     }
 
+    /**
+     * Loads configuration settings related to date and timestamp formatting.
+     * @private
+     */
     private _loadConfiguration(): void {
         const config = vscode.workspace.getConfiguration('unrealLogViewer');
         const useRelative = config.get<boolean>('useRelativeTimestamps', false);
@@ -95,14 +128,29 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    /**
+     * Gets the current pause state of the log viewer.
+     * @returns `true` if paused, `false` otherwise.
+     */
     public get paused(): boolean {
         return this.pauseManager.isPaused;
     }
 
+    /**
+     * Retrieves all raw (unformatted, unfiltered) log entries currently stored.
+     * @returns An array of `UnrealLogEntry` objects.
+     */
     public getRawLogs(): UnrealLogEntry[] {
         return this.logStore.getLogs();
     }
 
+    /**
+     * Resolves and initializes the webview view.
+     * This method is called by VS Code when the view needs to be displayed.
+     * @param view The `vscode.WebviewView` to be resolved.
+     * @param _context The `vscode.WebviewViewResolveContext` for the view.
+     * @param _token A `vscode.CancellationToken` for the resolution.
+     */
     public resolveWebviewView(
         view: vscode.WebviewView,
         _context: vscode.WebviewViewResolveContext,
@@ -136,26 +184,51 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         this._updateWebviewView();
     }
 
+    /**
+     * Requests a refresh of the log entries displayed in the webview.
+     * This typically involves re-filtering and re-formatting the logs.
+     */
     public requestLogRefresh(): void {
         this._sendFilteredLogsToWebview();
     }
 
+    /**
+     * Updates the font size used in the webview's log table.
+     * @param fontSize The new font size string (e.g., '12px', 'var(--vscode-font-size)').
+     */
     public updateWebviewFontSize(fontSize: string): void {
         this.webviewAppearanceManager.updateFontSize(fontSize);
     }
 
+    /**
+     * Toggles the use of log level-specific colors in the webview.
+     * @param useColors `true` to use colors, `false` for monochrome.
+     */
     public updateWebviewColorMode(useColors: boolean): void {
         this.webviewAppearanceManager.updateColorMode(useColors);
     }
 
+    /**
+     * Toggles the visibility of grid lines in the webview's log table.
+     * @param showGridLines `true` to show grid lines, `false` to hide them.
+     */
     public updateWebviewGridLinesVisibility(showGridLines: boolean): void {
         this.webviewAppearanceManager.updateGridLinesVisibility(showGridLines);
     }
 
+    /**
+     * Updates the font family used in the webview's log table.
+     * @param fontFamily The new font family string (e.g., 'Consolas', 'var(--vscode-font-family)').
+     */
     public updateWebviewFontFamily(fontFamily: string): void {
         this.webviewAppearanceManager.updateFontFamily(fontFamily);
     }
 
+    /**
+     * Retrieves the log entries currently displayed in the webview, formatted for display.
+     * This is primarily used for testing purposes.
+     * @returns An array of `FormattedDisplayLogEntry` objects.
+     */
     public getDisplayedLogEntriesForTest(): FormattedDisplayLogEntry[] {
         if (this.pauseManager.isPaused) {
             return this.pauseManager.getDisplayedLogs();
@@ -171,6 +244,10 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
             }));
     }
 
+    /**
+     * Sets the log filters for testing purposes.
+     * @param filters A partial `LogFilters` object containing the filters to apply.
+     */
     public setFiltersForTest(filters: Partial<LogFilters>): void { // Used LogFilters alias
         this.filterManager.updateFilters({
             levelFilter: filters.levelFilter, // Corrected: was filters.level
@@ -186,18 +263,35 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    /**
+     * Toggles the pause state of the log viewer for testing purposes.
+     */
     public togglePauseStateForTest(): void {
         this.togglePauseState();
     }
 
+    /**
+     * Gets the current pause state for testing purposes.
+     * @returns `true` if paused, `false` otherwise.
+     */
     public getPauseStateForTest(): boolean {
         return this.paused;
     }
 
+    /**
+     * Checks if a given log entry passes the current filter criteria.
+     * @param log The `UnrealLogEntry` to check.
+     * @returns `true` if the log passes filters, `false` otherwise.
+     */
     public passesFilters(log: UnrealLogEntry): boolean {
         return this.filterManager.passesFilters(log);
     }
 
+    /**
+     * Adds a new log entry to the viewer.
+     * The log is processed, potentially pruned if limits are exceeded, and displayed if it passes filters and the view is not paused.
+     * @param log The `UnrealLogEntry` to add.
+     */
     public addLog(log: UnrealLogEntry) {
         const pruneInfo: PruneInfo = this.logStore.addLog(log);
 
@@ -235,6 +329,9 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    /**
+     * Clears all logs from the store and webview, resets filters, and updates related UI elements.
+     */
     public clearLogs() {
         this.logStore.clearLogs();
         this.filterManager.clearFilters();
@@ -252,10 +349,18 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    /**
+     * Handles a request from the webview to clear logs.
+     * @private
+     */
     private handleWebviewClear(): void {
         this.clearLogs();
     }
 
+    /**
+     * Sends the currently filtered and formatted logs to the webview for display.
+     * @private
+     */
     private _sendFilteredLogsToWebview() {
         const filteredAndFormattedLogs: WebviewLog[] = this.logStore.getLogs()
             .filter(log => this.filterManager.passesFilters(log))
@@ -268,6 +373,10 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         this._updateCountsInWebview();
     }
 
+    /**
+     * Toggles the pause state of the log viewer.
+     * When unpausing, it refreshes the displayed logs.
+     */
     public togglePauseState(): void {
         const wasPaused = this.pauseManager.isPaused;
         this.pauseManager.toggleState(() => {
@@ -291,6 +400,10 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    /**
+     * Updates the log counts (displayed and total) in the webview and fires the `onLogCountsChanged` event.
+     * @private
+     */
     private _updateCountsInWebview() {
         const total = this.logStore.getLogCount();
         let shown: number;
@@ -303,6 +416,11 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         this.onLogCountsChanged.fire({ displayed: shown, total: total });
     }
 
+    /**
+     * Sends a message to the webview to update its entire log display, including logs, total count, and pause state.
+     * This is a more comprehensive update than `_sendFilteredLogsToWebview`.
+     * @private
+     */
     private _updateWebviewView(): void {
         if (!this._webviewView) {
             return;
@@ -318,21 +436,37 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         });
     }
 
+    /**
+     * Gets the total number of raw log entries stored.
+     * @returns The total log count.
+     */
     public getTotalLogCount(): number {
         return this.logStore.getLogCount();
     }
 
+    /**
+     * Gets the number of log entries currently displayed (i.e., passing filters).
+     * @returns The displayed log count.
+     */
     public getDisplayedLogCount(): number {
         return this.logStore.getLogs().filter(log => this.filterManager.passesFilters(log)).length;
     }
 
+    /**
+     * Toggles the visibility of the filter bar in the webview.
+     */
     public toggleFilterBarVisibility(): void {
         if (this._webviewView) {
             this._webviewView.webview.postMessage({ command: 'toggleFilterBar' });
         }
     }
 
-    // Method to get elements from the webview for testing
+    /**
+     * Retrieves elements from the webview matching a given CSS selector.
+     * This method is asynchronous and used for testing purposes.
+     * @param selector The CSS selector to query elements.
+     * @returns A promise that resolves to an array of `WebviewElement` objects, or rejects if the webview is unavailable or a timeout occurs.
+     */
     public async getWebviewElementsBySelector(selector: string): Promise<WebviewElement[]> { // Return type as WebviewElement[]
         if (!this._webviewView) {
             return Promise.reject("Webview is not available.");
@@ -355,7 +489,12 @@ export class UnrealLogViewerProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    // Method to click an element in the webview for testing
+    /**
+     * Simulates a click on an element within the webview, identified by its ID.
+     * This method is asynchronous and used for testing purposes.
+     * @param elementId The ID of the element to click.
+     * @returns A promise that resolves to `true` if the click was acknowledged, `false` otherwise, or rejects if the webview is unavailable or a timeout occurs.
+     */
     public async clickWebviewElement(elementId: string): Promise<boolean> {
         if (!this._webviewView) {
             return Promise.reject("Webview is not available.");

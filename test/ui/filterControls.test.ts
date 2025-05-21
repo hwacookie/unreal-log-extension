@@ -1,3 +1,8 @@
+/**
+ * @file filterControls.test.ts
+ * Contains UI tests for the filter controls in the Unreal Log Viewer extension.
+ * This includes testing the visibility toggle of the filter bar.
+ */
 import * as assert from 'assert';
 import * as vscode from 'vscode'; // Added import for vscode
 import {
@@ -15,7 +20,16 @@ before(async () => {
     await delay(getWebviewReadyDelayMs()); // Ensure webview is ready
 });
 
+/**
+ * Test suite for the filter controls UI in the Unreal Log Viewer.
+ */
 describe('Unreal Log Viewer - Filter Controls UI Tests', function () {
+    /**
+     * Test case to verify that the filter bar's visibility can be toggled
+     * using the 'unrealLogViewer.toggleFilterBarVisibility' command.
+     * It checks the initial hidden state, toggles it, verifies the change,
+     * toggles it again, and verifies it has reverted to the initial state.
+     */
     it('test 0004: should toggle filter visibility when "Toggle Filter Bar" command is executed', async function () {
         this.timeout(20000); // Increased timeout for UI operations
 

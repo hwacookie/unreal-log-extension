@@ -1,3 +1,9 @@
+/**
+ * @file filtering.test.ts
+ * Contains UI tests for the filtering functionality of the Unreal Log Viewer extension.
+ * These tests verify that logs are correctly filtered based on level, category, and message content,
+ * as well as combinations of these criteria and the ability to clear filters.
+ */
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import {
@@ -14,6 +20,12 @@ import {
     TEST_PORT
 } from './testUtils';
 
+/**
+ * Test suite for UI-based log filtering in the Unreal Log Viewer.
+ * It includes setup (`before`, `after`) to manage global configuration for timestamps
+ * and per-test setup (`beforeEach`, `afterEach`) to clear logs, reset filters, and ensure
+ * the viewer is not paused.
+ */
 describe('UI Filtering Tests', () => {
     let originalUseRelativeTimestamps: boolean | undefined;
     let originalTimestampFormat: string | undefined;
@@ -58,6 +70,12 @@ describe('UI Filtering Tests', () => {
         await delay(getCommandExecutionDelayMs());
     });
 
+    /**
+     * Test case to verify filtering by log level.
+     * Sends logs of different levels, applies an "Error" level filter,
+     * and checks if only the error log is displayed. Then clears the filter
+     * and verifies all logs are displayed.
+     */
     it('test 0004: should filter by log level (Error)', async () => {
         const logError: TestLogEntry = { date: new Date().toISOString(), level: 'Error', category: 'TestCat.0004', message: 'Error message 0004' };
         const logWarning: TestLogEntry = { date: new Date().toISOString(), level: 'Warning', category: 'TestCat.0004', message: 'Warning message 0004' };
@@ -82,6 +100,11 @@ describe('UI Filtering Tests', () => {
         assert.strictEqual(displayedLogs.length, 3, 'Test 0004: Should display all 3 logs after clearing level filter');
     });
 
+    /**
+     * Test case to verify filtering by log category.
+     * Sends logs with different categories, applies a filter for a specific category,
+     * and checks if only the log with that category is displayed.
+     */
     it('test 0005: should filter by category', async () => {
         const logCatA: TestLogEntry = { date: new Date().toISOString(), level: 'Log', category: 'CategoryA.0005', message: 'Message for CategoryA 0005' };
         const logCatB: TestLogEntry = { date: new Date().toISOString(), level: 'Log', category: 'CategoryB.0005', message: 'Message for CategoryB 0005' };
@@ -98,6 +121,11 @@ describe('UI Filtering Tests', () => {
         assert.strictEqual(displayedLogs[0].category, 'CategoryA.0005', 'Test 0005: Displayed log category mismatch');
     });
 
+    /**
+     * Test case to verify filtering by message content.
+     * Sends logs with different messages, applies a filter for a unique part of one message,
+     * and checks if only that specific log is displayed.
+     */
     it('test 0006: should filter by message content', async () => {
         const logMsg1: TestLogEntry = { date: new Date().toISOString(), level: 'Log', category: 'MessageTest.0006', message: 'This is a unique message content 0006' };
         const logMsg2: TestLogEntry = { date: new Date().toISOString(), level: 'Log', category: 'MessageTest.0006', message: 'Another message 0006' };
@@ -114,6 +142,11 @@ describe('UI Filtering Tests', () => {
         assert.strictEqual(displayedLogs[0].message, logMsg1.message, 'Test 0006: Displayed log message mismatch');
     });
 
+    /**
+     * Test case to verify filtering by multiple criteria (log level and category).
+     * Sends logs with various levels and categories, applies a filter for "Error" level
+     * AND a specific category, and checks if only the log matching both criteria is displayed.
+     */
     it('test 0007: should filter by multiple criteria (level and category)', async () => {
         const logErrorCatA: TestLogEntry = { date: new Date().toISOString(), level: 'Error', category: 'FilterCatA.0007', message: 'Error in FilterCatA 0007' };
         const logWarnCatA: TestLogEntry = { date: new Date().toISOString(), level: 'Warning', category: 'FilterCatA.0007', message: 'Warning in FilterCatA 0007' };
@@ -132,6 +165,11 @@ describe('UI Filtering Tests', () => {
         assert.strictEqual(displayedLogs[0].message, logErrorCatA.message, 'Test 0007: Displayed log message mismatch');
     });
 
+    /**
+     * Test case to verify that all filters can be cleared.
+     * Sends multiple logs, applies a filter, verifies that some logs are filtered out,
+     * then clears all filters and verifies that all logs are displayed again.
+     */
     it('test 0008: should clear all filters', async () => {
         const log1: TestLogEntry = { date: new Date().toISOString(), level: 'Error', category: 'ClearTest.0008', message: 'First message for clear test 0008' };
         const log2: TestLogEntry = { date: new Date().toISOString(), level: 'Log', category: 'ClearTest.0008', message: 'Second message for clear test 0008' };
