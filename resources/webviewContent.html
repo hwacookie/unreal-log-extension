@@ -243,8 +243,11 @@
             return rowHtml;
         }
 
+        let logEntryCounter = 0; // Added counter for unique IDs
+
         function createLogTableRow(log) {
             const row = document.createElement('tr');
+            row.id = `log-entry-${logEntryCounter++}`; // Assign unique ID
             row.innerHTML = createLogRowHtml(log);
             return row;
         }

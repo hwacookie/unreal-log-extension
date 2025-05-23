@@ -14,7 +14,7 @@ import * as net from 'net';
  * The default value is 0.001, which means the delays will be 1/1000th of their original values.
  * This is useful for slowing down tests to observe behavior or for speeding them up to reduce test time.
  */
-let globalDelayScalar = 0.001;
+let globalDelayScalar = 1.001;
 
 /**
  * Sets the global delay scalar.

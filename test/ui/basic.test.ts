@@ -16,7 +16,7 @@ describe('Unreal Log Viewer Extension - Basic Tests', () => {
    * Test case to ensure that the extension can be successfully activated.
    * It checks if the extension is found and then if it becomes active after activation.
    */
-  it('should activate the extension', async () => {
+  it('test 0001: should activate the extension', async () => {
     const extension = vscode.extensions.getExtension('coregames.unreal-log-viewer');
     assert.ok(extension, 'Extension should be found.');
     await extension!.activate();
@@ -28,7 +28,7 @@ describe('Unreal Log Viewer Extension - Basic Tests', () => {
    * It activates the extension if not already active, then uses a utility function
    * to focus the view, and checks if the view is expected to be in the panel.
    */
-  it('should open the Unreal Log Viewer view in the panel', async () => {
+  it('test 0002: should open the Unreal Log Viewer view in the panel', async () => {
     const extension = vscode.extensions.getExtension('coregames.unreal-log-viewer');
     assert.ok(extension, 'Extension should be found to open view.');
 

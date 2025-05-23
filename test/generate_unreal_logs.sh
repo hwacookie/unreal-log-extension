@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # Unreal Log Viewer Test Log Generator (Bash)
 # Usage: ./generate_unreal_logs.sh [--host <host>] [--port <port>] [--delay <ms>] [--random] [--source <source>] [--help]
 
